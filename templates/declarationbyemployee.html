@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Declaration & Undertaking Form - Phemedia Onguard Services Ltd{% endblock %}
+
+{% block extra_js %}
+<script>
+    let signaturePad;
+    let uploadedSignature = null;
+    let isDrawing = false;
+    let ctx = null;
+
+    // Basic fallback drawing implementation
+    function setupBasicDrawing(canvas) {
+        ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDrawing = false; });
+        canvas.addEventListener('mouseout', () => { isDrawing = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.beginPath();
+            ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('touchend', () => { isDrawing = false; });
+    }
+
+    // Wait for SignaturePad to load
+    function waitForSignaturePad() {
+        return new Promise((resolve) => {
+            if (typeof SignaturePad !== 'undefined') {
+                resolve(true);
+            } else {
+                const maxAttempts = 20;
+                let attempts = 0;
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    if (typeof SignaturePad !== 'undefined' || attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        resolve(attempts < maxAttempts);
+                    }
+                }, 100);
+            }
+        });
+    }
+
+    async function initSignaturePad() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+
+        const sigPadLoaded = await waitForSignaturePad();
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        if (sigPadLoaded && typeof SignaturePad !== 'undefined') {
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)'
+            });
+        } else {
+            setupBasicDrawing(canvas);
+        }
+    }
+
+    function clearSignature() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (signaturePad && typeof signaturePad.clear === 'function') {
+            signaturePad.clear();
+        } else if (canvas && ctx) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        uploadedSignature = null;
+        document.getElementById('uploadedSigPreview').innerHTML = '';
+    }
+
+    function saveSignature() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+        
+        const canvasData = canvas.toDataURL('image/png');
+        const isBlank = canvasData === document.createElement('canvas').toDataURL('image/png');
+        
+        let hasSignature = false;
+        if (signaturePad && typeof signaturePad.isEmpty === 'function') {
+            hasSignature = !signaturePad.isEmpty();
+        } else {
+            hasSignature = !isBlank;
+        }
+
+        if (hasSignature) {
+            const signatureData = canvas.toDataURL('image/png');
+            // Save drawn signature to both new and legacy fields
+            document.getElementById('clientSignatureData_drawn').value = signatureData;
+            document.getElementById('clientSignatureData').value = signatureData;
+            const saveMsg = document.getElementById('signatureSaveMsg');
+            saveMsg.style.display = 'block';
+            saveMsg.textContent = '✓ Signature saved successfully - Thank you!';
+            document.getElementById('uploadedSigPreview').innerHTML = 
+                '<img src="' + signatureData + '" style="max-width: 200px; max-height: 100px; border: 1px solid #27ae60; border-radius: 4px; background: #f0fff4;">';
+        } else {
+            alert('Please draw your signature first');
+        }
+    }
+
+    function handleSignatureUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit');
+                return;
+            }
+            
+            // Validate file type
+            if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+                alert('Please upload a valid image file (JPG or PNG)');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedSignature = e.target.result;
+                // Save uploaded signature to both new and legacy fields
+                document.getElementById('clientSignatureData_uploaded').value = uploadedSignature;
+                document.getElementById('clientSignatureData').value = uploadedSignature;
+                document.getElementById('uploadedSigPreview').innerHTML = 
+                    '<img src="' + uploadedSignature + '" style="max-width: 200px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px;">';
+                if (signaturePad && typeof signaturePad.clear === 'function') signaturePad.clear();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function submitForm(event) {
+        event.preventDefault();
+        
+        try {
+            console.log('[declarationbyemployee] submitForm called');
+            
+            const form = document.getElementById('declarationForm');
+            if (!form) {
+                console.error('[declarationbyemployee] Form not found');
+                return;
+            }
+            
+            // Comprehensive form validation
+            const errors = [];
+            
+            // Check text fields
+            try {
+                if (!document.getElementById('employee_full_name').value.trim()) errors.push('Employee Full Name is required');
+                if (!document.getElementById('father_name').value.trim()) errors.push("Father's Name is required");
+                if (!document.getElementById('employee_dob').value) errors.push('Date of Birth is required');
+                if (!document.getElementById('employee_residential_address').value.trim()) errors.push('Residential Address is required');
+                if (!document.getElementById('employee_phone').value.trim()) errors.push('Phone Number is required');
+                if (!document.getElementById('position_applied').value) errors.push('Position is required');
+                if (!document.getElementById('employee_email').value.trim()) errors.push('Email Address is required');
+            } catch (e) {
+                console.error('[declarationbyemployee] Error checking text fields:', e);
+            }
+            
+            // Check file uploads
+            try {
+                if (!document.getElementById('employee_photograph').files.length) errors.push('Employee Photograph is required');
+                if (!document.getElementById('employee_nin').files.length) errors.push('Employee NIN/ID is required');
+            } catch (e) {
+                console.error('[declarationbyemployee] Error checking file uploads:', e);
+            }
+            
+            // Check all checkboxes
+            try {
+                const checkboxes = ['comply_rules', 'punctuality', 'good_conduct', 'notice_period', 'sabotage_prohibition', 'confidentiality', 'lawful_orders', 'equipment_care'];
+                for (let checkbox of checkboxes) {
+                    const cb = document.getElementById(checkbox);
+                    if (!cb) {
+                        console.warn('[declarationbyemployee] Checkbox not found:', checkbox);
+                        continue;
+                    }
+                    if (!cb.checked) {
+                        errors.push('All undertakings/declarations must be checked');
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.error('[declarationbyemployee] Error checking checkboxes:', e);
+            }
+            
+            // Check signature
+            try {
+                const signatureField = document.getElementById('clientSignatureData');
+                if (!signatureField || !signatureField.value) errors.push('Your signature (drawn or uploaded) is required');
+            } catch (e) {
+                console.error('[declarationbyemployee] Error checking signature:', e);
+            }
+            
+            // Check declaration date
+            try {
+                if (!document.getElementById('declaration_date').value) errors.push('Declaration Date is required');
+            } catch (e) {
+                console.error('[declarationbyemployee] Error checking date:', e);
+            }
+            
+            // Show errors if any
+            if (errors.length > 0) {
+                console.log('[declarationbyemployee] Form validation errors:', errors);
+                const alertDiv = document.getElementById('formAlert');
+                if (alertDiv) {
+                    alertDiv.innerHTML = 
+                        '<div class="alert alert-error"><strong>Please correct the following:</strong><ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">' + 
+                        errors.map(e => '<li>' + e + '</li>').join('') + 
+                        '</ul></div>';
+                }
+                window.scrollTo(0, 0);
+                return;
+            }
+
+            console.log('[declarationbyemployee] Validation passed, creating FormData');
+            
+            const formData = new FormData(form);
+            formData.append('form_type', 'declarationbyemployee');
+            
+            // Get CSRF token
+            const csrfTokenElement = document.querySelector('input[name="csrf_token"]');
+            if (!csrfTokenElement) {
+                console.error('[declarationbyemployee] CSRF token not found in form');
+                const alertDiv = document.getElementById('formAlert');
+                if (alertDiv) {
+                    alertDiv.innerHTML = '<div class="alert alert-error">Security token missing. Please refresh the page and try again.</div>';
+                }
+                return;
+            }
+            const csrfToken = csrfTokenElement.value;
+            console.log('[declarationbyemployee] CSRF token found, length:', csrfToken.length);
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+            }
+
+            // Collect form data for summary display
+            const formDataObj = {};
+            for (let [key, value] of formData.entries()) {
+                if (key !== 'form_type' && key !== 'csrf_token') {
+                    if (formDataObj[key]) {
+                        if (Array.isArray(formDataObj[key])) {
+                            formDataObj[key].push(value);
+                        } else {
+                            formDataObj[key] = [formDataObj[key], value];
+                        }
+                    } else {
+                        formDataObj[key] = value;
+                    }
+                }
+            }
+
+            console.log('[declarationbyemployee] Submitting form with data keys:', Object.keys(formDataObj));
+
+            fetch('/submit-form', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            })
+            .then(response => {
+                console.log('[declarationbyemployee] Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('[declarationbyemployee] Response data:', data);
+                if (data.success) {
+                    // Store form data and email in session for confirmation page
+                    sessionStorage.setItem('submittedFormData', JSON.stringify(formDataObj));
+                    sessionStorage.setItem('submittedEmail', formDataObj.employee_email || '');
+                    
+                    // Redirect to confirmation page
+                    window.location.href = '/confirmation?email=' + encodeURIComponent(formDataObj.employee_email || '');
+                } else {
+                    document.getElementById('formAlert').innerHTML = 
+                        '<div class="alert alert-error">' + (data.message || 'Submission failed') + '</div>';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit Declaration';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('[declarationbyemployee] Fetch error:', error);
+                document.getElementById('formAlert').innerHTML = 
+                    '<div class="alert alert-error">An error occurred: ' + error.message + '</div>';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Declaration';
+                }
+            });
+        } catch (e) {
+            console.error('[declarationbyemployee] Fatal error in submitForm:', e);
+            document.getElementById('formAlert').innerHTML = 
+                '<div class="alert alert-error">Fatal error: ' + e.message + '</div>';
+        }
+    }
+
+    function setTodayDate() {
+        const dateField = document.getElementById('declaration_date');
+        if (dateField && !dateField.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateField.value = today;
+            console.log('[declarationbyemployee] Auto-filled date to:', today);
+        } else if (!dateField) {
+            console.warn('[declarationbyemployee] declaration_date field not found');
+        } else {
+            console.log('[declarationbyemployee] Date field already has value:', dateField.value);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[declarationbyemployee] DOMContentLoaded - initializing form');
+        initSignaturePad();
+        setTodayDate();
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-to-home">← Back to Home</a>
+
+<div class="form-container">
+    <div class="form-header">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Phemedia Logo" style="height: 60px; width: auto;">
+            <div>
+                <h2 style="margin: 0;">PHEMEDIA ONGUARD SERVICES LTD</h2>
+                <p style="margin: 0; font-size: 1rem; color: #333; font-weight: bold;">R C 8218219</p>
+            </div>
+        </div>
+        <h3>UNDERTAKING / DECLARATION BY EMPLOYEE</h3>
+        <h4 style="color: #555; font-weight: normal; margin-top: 0.5rem;">Form for Staff - Undertaking by Employee/Security Personnel</h4>
+        <p>Please fill in all required fields marked with an asterisk (*)</p>
+    </div>
+
+    <div id="formAlert"></div>
+
+    <form id="declarationForm" onsubmit="submitForm(event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- Employee Declaration Preamble -->
+        <div style="background: #f9f9f9; padding: 2rem; border-left: 4px solid #3498db; margin-bottom: 2rem; margin-top: 1rem; border-radius: 6px;">
+            <p style="font-size: 1rem; line-height: 1.8; color: #2c3e50; margin: 0;">
+                <strong>I,</strong> 
+                <input type="text" id="employee_full_name" name="employee_full_name" placeholder="Full Name" required style="border: none; border-bottom: 2px solid #3498db; padding: 0.3rem 0.5rem; font-weight: bold; min-width: 200px; box-sizing: border-box;">
+                <br>
+                <strong>Son/Daughter of</strong> 
+                <input type="text" id="father_name" name="father_name" placeholder="Father's Name" required style="border: none; border-bottom: 2px solid #3498db; padding: 0.3rem 0.5rem; font-weight: bold; min-width: 200px; box-sizing: border-box;">
+                <strong>,</strong>
+                <br>
+                <strong>Date of Birth:</strong> 
+                <input type="date" id="employee_dob" name="employee_dob" required style="border: none; border-bottom: 2px solid #3498db; padding: 0.3rem 0.5rem; font-weight: bold; min-width: 150px; box-sizing: border-box;">
+                <strong>,</strong>
+                <br>
+                <strong>Residential Address:</strong> 
+                <input type="text" id="employee_residential_address" name="employee_residential_address" placeholder="Full Address" required style="border: none; border-bottom: 2px solid #3498db; padding: 0.3rem 0.5rem; font-weight: bold; min-width: 250px; box-sizing: border-box;">
+                <strong>,</strong>
+                <br>
+                <strong>Phone Number:</strong> 
+                <input type="tel" id="employee_phone" name="employee_phone" placeholder="Mobile Number" required style="border: none; border-bottom: 2px solid #3498db; padding: 0.3rem 0.5rem; font-weight: bold; min-width: 150px; box-sizing: border-box;">
+                <strong>,</strong>
+                <br><br>
+                hereby solemnly undertake, declare, and agree as follows while employed as a 
+                <select id="position_applied" name="position_applied" required style="border: none; border-bottom: 2px solid #3498db; padding: 0.3rem 0.5rem; font-weight: bold; min-width: 180px; background: transparent;">
+                    <option value="">Select Position...</option>
+                    <option value="Bouncer">Bouncer</option>
+                    <option value="Driver">Driver</option>
+                    <option value="HR">HR</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Marketer">Marketer</option>
+                    <option value="Receptionist">Receptionist</option>
+                    <option value="Security Guard">Security Guard</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Trainer">Trainer</option>
+                    <option value="Other">Other</option>
+                </select>
+                with <strong>Phemedia Onguard Services Ltd:</strong>
+            </p>
+        </div>
+
+        <!-- Email and Photograph Section -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Contact & Photograph</h3>
+
+        <div class="form-group">
+            <label for="employee_email" class="required">Email Address</label>
+            <input type="email" id="employee_email" name="employee_email" placeholder="Email Address" required>
+        </div>
+
+        <!-- Photograph Section -->
+        <div class="form-group">
+            <label for="employee_photograph" class="required">Passport-Size Photograph</label>
+            <input type="file" id="employee_photograph" name="employee_photograph" accept="image/*" required>
+            <small style="color: #7f8c8d; display: block; margin-top: 0.25rem;">✓ Attach recent passport-size photograph here (JPG, PNG, GIF - max 5MB)</small>
+        </div>
+
+        <!-- Undertakings & Declarations -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Undertakings & Declarations</h3>
+
+            <!-- Declaration 1 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">1. Compliance with Company Rules and Regulations</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I undertake to strictly obey and comply with all rules, regulations, policies, standing orders, instructions, and directives issued by Phemedia Onguard Services Ltd from time to time, including but not limited to the company's code of conduct, uniform policy, duty roster, reporting procedures, and any amendments thereto.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="comply_rules" name="comply_rules" value="yes" required>
+                    <label for="comply_rules">I acknowledge and agree to comply with all company rules and regulations</label>
+                </div>
+            </div>
+
+            <!-- Declaration 2 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">2. Punctuality and Attendance</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I commit to being punctual for all assigned duties and shifts. Lateness, unauthorized absence, or absenteeism without prior approval is unacceptable and will attract disciplinary action, including warnings, salary deductions, suspension, or termination.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="punctuality" name="punctuality" value="yes" required>
+                    <label for="punctuality">I commit to punctuality and regular attendance</label>
+                </div>
+            </div>
+
+            <!-- Declaration 3 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">3. Maintenance of Good Character and Conduct</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I pledge to maintain exemplary personal and professional conduct, high moral standards, integrity, honesty, discipline, and good behavior at all times. I shall not engage in any act that brings disrepute to the company, its clients, or the security profession.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="good_conduct" name="good_conduct" value="yes" required>
+                    <label for="good_conduct">I pledge to maintain exemplary conduct and high moral standards</label>
+                </div>
+            </div>
+
+            <!-- Declaration 4 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">4. Notice Period for Resignation / Termination</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I agree to give a minimum of 30 (thirty) days' written notice to the management before resigning or terminating my employment. Failure to serve the required notice may result in forfeiture of any outstanding benefits, salary in lieu of notice deduction, or legal action for damages caused to the company.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="notice_period" name="notice_period" value="yes" required>
+                    <label for="notice_period">I agree to give 30 days' written notice before resignation or termination</label>
+                </div>
+            </div>
+
+            <!-- Declaration 5 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">5. Prohibition of Sabotage and Misconduct</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I understand and agree that any form of sabotage, including but not limited to deliberate damage to company or client property, leakage of confidential information, negligence leading to security breach, insubordination, theft, fraud, collusion with unauthorized persons, or any act prejudicial to the company's interests/security operations, shall result in immediate dismissal without notice, forfeiture of all benefits, and possible legal prosecution under relevant Nigerian laws (including the Private Guard Companies Act and Criminal Code).
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="sabotage_prohibition" name="sabotage_prohibition" value="yes" required>
+                    <label for="sabotage_prohibition">I understand the prohibitions on sabotage and misconduct</label>
+                </div>
+            </div>
+
+            <!-- Declaration 6 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">6. Confidentiality and Non-Disclosure</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I undertake to treat all company information, client details, operational strategies, security protocols, and any other sensitive data as strictly confidential during and after my employment. I shall not disclose, copy, or misuse such information without written permission.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="confidentiality" name="confidentiality" value="yes" required>
+                    <label for="confidentiality">I agree to maintain strict confidentiality of company and client information</label>
+                </div>
+            </div>
+
+            <!-- Declaration 7 -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ddd;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">7. Obedience to Lawful Orders and Assignment</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I agree to perform all lawful duties assigned to me diligently, to the best of my ability, and in the interest of the company and its clients. I shall report any suspicious activity, incident, or irregularity immediately to my superior.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="lawful_orders" name="lawful_orders" value="yes" required>
+                    <label for="lawful_orders">I agree to perform all lawful duties diligently and report irregularities</label>
+                </div>
+            </div>
+
+            <!-- Declaration 8 -->
+            <div style="margin-bottom: 0;">
+                <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 0.5rem;">8. Uniform, Equipment, and Company Property</h4>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+                    I undertake to wear the prescribed uniform properly, handle all company-issued equipment (e.g., baton, torch, radio, ID card) with care, and return the same in good condition upon leaving service. Any loss or damage due to negligence will be recovered from my salary/dues.
+                </p>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="equipment_care" name="equipment_care" value="yes" required>
+                    <label for="equipment_care">I agree to properly maintain all company property and equipment</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signature & Date -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Required Documents</h3>
+        
+        <div class="form-group">
+            <label for="employee_nin" class="required">Copy of Valid National Identification Number (NIN)</label>
+            <input type="file" id="employee_nin" name="employee_nin" accept="image/*,.pdf" required>
+            <small style="color: #7f8c8d; display: block; margin-top: 0.25rem;">✓ Accepted formats: JPG, PNG, GIF, PDF (max 5MB)</small>
+        </div>
+
+        <!-- Employee Signature -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Signature & Date</h3>
+        
+        <div class="form-group">
+            <label class="required">Signature</label>
+            <canvas id="signatureCanvas" style="display: block; width: 100%; height: 150px; border: 2px solid #3498db; cursor: crosshair; background-color: white; border-radius: 4px; margin-bottom: 0.5rem;"></canvas>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <button type="button" onclick="clearSignature()" class="btn btn-secondary" style="flex: 1;">Clear Signature</button>
+                <button type="button" onclick="saveSignature()" class="btn btn-primary" style="flex: 1;">Save Signature</button>
+            </div>
+            <div id="signatureSaveMsg" style="display: none; color: #27ae60; font-weight: bold; margin-bottom: 1rem;">✓ Signature saved successfully</div>
+            
+            <p style="text-align: center; color: #7f8c8d; margin: 1rem 0;">OR</p>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="signatureUpload">Upload Signature Image:</label>
+                <input type="file" id="signatureUpload" accept="image/*" onchange="handleSignatureUpload(event)" style="margin-top: 0.5rem;">
+            </div>
+            <div id="uploadedSigPreview" style="margin-bottom: 1rem;"></div>
+            <input type="hidden" id="clientSignatureData" name="clientSignatureData" required>
+            <input type="hidden" id="clientSignatureData_drawn" name="clientSignatureData_drawn">
+            <input type="hidden" id="clientSignatureData_uploaded" name="clientSignatureData_uploaded">
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="declaration_date" class="required">Date</label>
+                <input type="date" id="declaration_date" name="declaration_date" required>
+            </div>
+            <div class="form-group">
+                <label for="declaration_place">Place</label>
+                <input type="text" id="declaration_place" name="declaration_place" placeholder="City/Location">
+            </div>
+        </div>
+
+        <!-- Bank Details -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Bank Details</h3>
+        
+        <div style="background: #e8f4f8; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; color: #2c3e50;">
+            <p style="margin: 0 0 1rem 0;"><strong>Phemedia Onguard Services Ltd</strong></p>
+            <p style="margin: 0.5rem 0;"><strong>Moniepoint Microfinance Bank Account:</strong> 6707932476</p>
+            <p style="margin: 0.5rem 0;"><strong>OR</strong></p>
+            <p style="margin: 0.5rem 0;"><strong>Providus Bank Account:</strong> 1306872171</p>
+        </div>
+
+        <!-- Final Acknowledgment -->
+        <div style="background: #fff3cd; padding: 1rem; border-radius: 6px; border-left: 4px solid #ffc107; margin-bottom: 1.5rem; margin-top: 2rem;">
+            <p style="color: #856404; margin: 0; font-weight: 500;">
+                ✓ <strong>Undertaking Made in Good Faith:</strong> I have read, fully understood, and voluntarily accept the above terms and conditions. I am aware that this undertaking forms an integral part of my employment with Phemedia Onguard Services Ltd and that any breach may lead to disciplinary action up to and including summary dismissal and legal proceedings. This undertaking is made in good faith and is binding on me.
+            </p>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">Submit Declaration</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+            <button type="button" onclick="window.print()" class="btn btn-secondary">Print Form</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

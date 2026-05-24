@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}PHEMEDAA Forms - Phemediaa Form Portal{% endblock %}
+
+{% block content %}
+<style>
+    .admin-login-menu {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+
+    .admin-login-btn {
+        display: inline-block;
+        padding: 12px 28px;
+        background-color: #3498db;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        border: 2px solid #3498db;
+        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+
+    .admin-login-btn:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+        box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
+        transform: translateY(-2px);
+    }
+
+    .admin-login-btn.outline {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .admin-login-btn.outline:hover {
+        background-color: #2980b9;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .admin-login-menu {
+            top: 10px;
+            right: 10px;
+        }
+
+        .admin-login-btn {
+            padding: 10px 18px;
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .admin-login-btn {
+            padding: 8px 14px;
+            font-size: 12px;
+        }
+    }
+</style>
+
+<!-- Admin Login Menu -->
+<div class="admin-login-menu">
+    <a href="/admin_login" class="admin-login-btn outline">🔐 Admin Login</a>
+</div>
+
+<section class="hero">
+    <h2>Welcome to Our Client Portal</h2>
+    <p>Please select a form to complete your engagement with us. Fill out all required fields marked with an asterisk (*).</p>
+</section>
+
+<div class="forms-grid">
+    <!-- Background Check Form -->
+    <div class="form-card">
+        <div class="form-icon">📋</div>
+        <h3>Background Check</h3>
+        <p>Complete your background check submission form.</p>
+        <a href="/backgroundcheck" class="btn btn-primary">Open Form</a>
+    </div>
+
+    <!-- Client Engagement Form -->
+    <div class="form-card">
+        <div class="form-icon">🏢</div>
+        <h3>Client Engagement Form & Agreement</h3>
+        <p>Submit your client engagement agreement for security services.</p>
+        <a href="/clientengagement" class="btn btn-primary">Open Form</a>
+    </div>
+
+    <!-- Declaration by Employee Form -->
+    <div class="form-card">
+        <div class="form-icon">📝</div>
+        <h3>Declaration by Employee</h3>
+        <p>Submit your employee declaration form.</p>
+        <a href="/declarationbyemployee" class="btn btn-primary">Open Form</a>
+    </div>
+
+    <!-- Guarantor Undertaking Form -->
+    <div class="form-card">
+        <div class="form-icon">🤝</div>
+        <h3>Guarantor Undertaking</h3>
+        <p>Submit your guarantor undertaking agreement.</p>
+        <a href="/guarantorundertaking" class="btn btn-primary">Open Form</a>
+    </div>
+
+    <!-- Service Agreement Form -->
+    <div class="form-card">
+        <div class="form-icon">✅</div>
+        <h3>Service Agreement</h3>
+        <p>Review and sign our service agreement.</p>
+        <a href="/serviceagreement" class="btn btn-primary">Open Form</a>
+    </div>
+
+    <!-- Tracking Agreement Form -->
+    <div class="form-card">
+        <div class="form-icon">📍</div>
+        <h3>Tracking Agreement</h3>
+        <p>Submit your tracking agreement form.</p>
+        <a href="/trackingagreement" class="btn btn-primary">Open Form</a>
+    </div>
+
+    <!-- Oil & Gas Service Request Form -->
+    <div class="form-card">
+        <div class="form-icon">⛽</div>
+        <h3>Oil & Gas Service Request</h3>
+        <p>Submit your service request for oil & gas sector operations.</p>
+        <a href="/oilgasservicerequest" class="btn btn-primary">Open Form</a>
+    </div>
+</div>
+
+<section class="help-section">
+    <h3>Need Help?</h3>
+    <p>If you have any questions about these forms or need assistance, please contact our support team:</p>
+    <p><strong>Email:</strong> {{ support_email }} | <strong>Phone:</strong> {{ support_phone }}</p>
+</section>
+{% endblock %}

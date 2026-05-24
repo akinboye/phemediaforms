@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Company Address - PHEMEDAA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-container {
+        background: #f5f7fa;
+        min-height: calc(100vh - 200px);
+        padding: 2rem 0;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .admin-header h1 {
+        color: #2c3e50;
+        margin: 0;
+        font-size: 1.8rem;
+    }
+
+    .btn-back {
+        background: #95a5a6;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+
+    .btn-back:hover {
+        background: #7f8c8d;
+    }
+
+    .admin-content {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .section-header {
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h2 {
+        color: #2c3e50;
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .form-group textarea {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid #bdc3c7;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 0.95rem;
+        resize: vertical;
+        min-height: 80px;
+        box-sizing: border-box;
+    }
+
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .btn-primary {
+        background: #3498db;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: background 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: #2980b9;
+    }
+
+    .btn-danger {
+        background: #e74c3c;
+        color: white;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-danger:hover {
+        background: #c0392b;
+    }
+
+    .btn-success {
+        background: #27ae60;
+        color: white;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-success:hover {
+        background: #229954;
+    }
+
+    .current-address-box {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+
+    .current-address-box h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.1rem;
+    }
+
+    .current-address-box p {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.5;
+        opacity: 0.95;
+    }
+
+    .no-address {
+        background: #ecf0f1;
+        color: #7f8c8d;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+
+    .admin-table thead {
+        background: #ecf0f1;
+    }
+
+    .admin-table th {
+        padding: 1rem;
+        text-align: left;
+        color: #2c3e50;
+        font-weight: 600;
+        border-bottom: 2px solid #bdc3c7;
+    }
+
+    .admin-table td {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    .admin-table tbody tr:hover {
+        background: #f9f9f9;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #d5f4e6;
+        color: #27ae60;
+    }
+
+    .status-inactive {
+        background: #f5f5f5;
+        color: #7f8c8d;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #7f8c8d;
+        padding: 2rem;
+    }
+
+    .flash-messages {
+        margin-bottom: 1.5rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-success {
+        background: #d5f4e6;
+        color: #27ae60;
+        border-left: 4px solid #27ae60;
+    }
+
+    .alert-error {
+        background: #fadbd8;
+        color: #e74c3c;
+        border-left: 4px solid #e74c3c;
+    }
+
+    @media (max-width: 768px) {
+        .admin-container {
+            padding: 1rem;
+        }
+
+        .admin-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .admin-content {
+            padding: 1.5rem;
+        }
+
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 0.5rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .btn-danger,
+        .btn-success {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container container">
+    <div class="admin-header">
+        <h1>🏢 Company Address Management</h1>
+        <a href="/superadmin_dashboard" class="btn-back">← Back to Dashboard</a>
+    </div>
+
+    <!-- Flash Messages -->
+    {% if get_flashed_messages() %}
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Current Address Display -->
+            <div class="admin-content">
+                <div class="section-header">
+                    <h2>📍 Current Address</h2>
+                </div>
+                {% if current_address %}
+                <div class="current-address-box">
+                    <h3>✓ Active Address</h3>
+                    <p>{{ current_address.address }}</p>
+                </div>
+                {% else %}
+                <div class="no-address">
+                    <p>No active company address set. Please create one below.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Add/Update Address Form -->
+            <div class="admin-content">
+                <div class="section-header">
+                    <h2>➕ Add New Address</h2>
+                </div>
+                <form method="POST" action="/superadmin/company-address">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="address">Company Address *</label>
+                        <textarea 
+                            id="address" 
+                            name="address" 
+                            required 
+                            placeholder="Enter the complete company address including plot, street, area, city, state, and postal code...">
+                        </textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">✓ Save Address</button>
+                </form>
+                <p style="font-size: 0.85rem; color: #7f8c8d; margin-top: 1rem;">
+                    💡 The new address will automatically become active, and the previous address will be archived.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Address History -->
+    <div class="admin-content">
+        <div class="section-header">
+            <h2>📜 Address History</h2>
+        </div>
+        
+        {% if all_addresses %}
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Address</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Created By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for address in all_addresses %}
+                    <tr>
+                        <td>
+                            <strong>{{ address.address[:50] }}{% if address.address|length > 50 %}...{% endif %}</strong>
+                            {% if address.address|length > 50 %}<br><small style="color: #7f8c8d;">{{ address.address }}</small>{% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge {% if address.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                {% if address.is_active %}✓ Active{% else %}Archived{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ address.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ address.created_by_admin.username if address.created_by_admin else 'System' }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                {% if not address.is_active %}
+                                <form method="POST" action="/superadmin/company-address/{{ address.id }}/activate" style="display: inline;">
+                                    {{ csrf_token() }}
+                                    <button type="submit" class="btn-success">Activate</button>
+                                </form>
+                                {% endif %}
+                                <form method="POST" action="/superadmin/company-address/{{ address.id }}/delete" style="display: inline;">
+                                    {{ csrf_token() }}
+                                    <button type="submit" class="btn-danger" onclick="return confirm('Delete this address? This action cannot be undone.')">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No address history yet. Create your first company address above.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

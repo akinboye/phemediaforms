@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Investigative Service Agreement - Phemedia Onguard Services Ltd{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.js"></script>
+<script>
+    let signaturePad;
+    let uploadedSignature = null;
+
+    function initSignaturePad() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)'
+            });
+        }
+    }
+
+    function clearSignature() {
+        if (signaturePad) signaturePad.clear();
+        document.getElementById('clientSignatureData_drawn').value = '';
+        document.getElementById('signatureSaveMsg').style.display = 'none';
+    }
+
+    function clearUpload() {
+        uploadedSignature = null;
+        document.getElementById('clientSignatureData_uploaded').value = '';
+        document.getElementById('uploadedSigPreview').innerHTML = '';
+        document.getElementById('signatureUpload').value = '';
+    }
+
+    function saveSignature() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+        if (signaturePad && !signaturePad.isEmpty()) {
+            const signatureData = canvas.toDataURL('image/png');
+            document.getElementById('clientSignatureData_drawn').value = signatureData;
+            document.getElementById('clientSignatureData').value = signatureData;
+            document.getElementById('signatureSaveMsg').style.display = 'block';
+        } else {
+            alert('Please draw your signature first');
+        }
+    }
+
+    function handleSignatureUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedSignature = e.target.result;
+                document.getElementById('clientSignatureData_uploaded').value = uploadedSignature;
+                document.getElementById('clientSignatureData').value = uploadedSignature;
+                document.getElementById('uploadedSigPreview').innerHTML =
+                    '<img src="' + uploadedSignature + '" style="max-width: 200px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px;">' +
+                    ' <button type="button" onclick="clearUpload()" style="margin-left:0.5rem;color:#e74c3c;background:none;border:none;cursor:pointer;">✕ Remove</button>';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function submitClientAcceptance(event) {
+        event.preventDefault();
+        
+        const form = document.getElementById('clientAcceptanceForm');
+        const formData = new FormData(form);
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        if (!token) {
+            document.getElementById('formAlert').innerHTML = 
+                '<div class="alert alert-error">Invalid or missing token. This link may have expired.</div>';
+            return;
+        }
+        
+        formData.append('token', token);
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        fetch('/submit-client-acceptance', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('formAlert').innerHTML = 
+                    '<div class="alert alert-success"><strong>Success!</strong> Your signature has been submitted and saved. You will receive a copy of the signed agreement at your email shortly.</div>';
+                document.getElementById('clientAcceptanceForm').style.display = 'none';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+            } else {
+                document.getElementById('formAlert').innerHTML = 
+                    '<div class="alert alert-error">' + data.message + '</div>';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign & Submit Agreement';
+            }
+        })
+        .catch(error => {
+            document.getElementById('formAlert').innerHTML = 
+                '<div class="alert alert-error">An error occurred. Please try again.</div>';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign & Submit Agreement';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initSignaturePad);
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Phemedia Logo" style="height: 60px; width: auto;">
+            <div>
+                <h2 style="margin: 0;">PHEMEDIA ONGUARD SERVICES LTD</h2>
+                <p style="margin: 0; font-size: 1rem; color: #333; font-weight: bold;">R C 8218219</p>
+            </div>
+        </div>
+        <hr style="margin-top: 1rem; margin-bottom: 1rem;">
+        <h3>Agreement Signature Required</h3>
+        <p style="margin-top: 1rem;">Please review the agreement below and provide your signature to complete the process</p>
+    </div>
+
+    <div id="formAlert"></div>
+
+    <!-- Display Agreement Summary and Full Terms -->
+    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 6px; margin-bottom: 2rem; border-left: 4px solid #3498db;">
+        <h4 style="margin-top: 0;">Agreement Summary</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 14px;">
+            <div>
+                <p style="margin: 0.5rem 0;"><strong>Agreement Date:</strong> <span id="agreementDate">{{ agreement.submitted_data.get('agreement_date', 'N/A') }}</span></p>
+                <p style="margin: 0.5rem 0;"><strong>Client Name:</strong> <span id="clientName">{{ agreement.submitted_data.get('client_name', 'N/A') }}</span></p>
+                <p style="margin: 0.5rem 0;"><strong>Email:</strong> <span id="clientEmail">{{ agreement.user_email }}</span></p>
+            </div>
+            <div>
+                <p style="margin: 0.5rem 0;"><strong>Phone:</strong> <span id="clientPhone">{{ agreement.submitted_data.get('client_phone', 'N/A') }}</span></p>
+                <p style="margin: 0.5rem 0;"><strong>Service Fee:</strong> ₦<span id="serviceFee">{{ agreement.submitted_data.get('service_fee', '0') }}</span></p>
+                <p style="margin: 0.5rem 0;"><strong>Company Address:</strong> <span id="companyAddress">{{ agreement.submitted_data.get('company_office', 'N/A') }}</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Agreement Terms Display -->
+    <div style="background: #f9f9f9; padding: 2rem; border-radius: 6px; margin-bottom: 2rem; border: 1px solid #e0e0e0;">
+        <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 1.5rem;">📋 Complete Agreement Terms & Conditions</h4>
+
+        <!-- 1. Scope of Services -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">1. Scope of Services</h5>
+            <p style="margin: 0.5rem 0;">The Service Provider agrees to provide professional investigative support to the Client, which may include:</p>
+            <ol style="list-style-type: lower-alpha; margin: 0.5rem 0; padding-left: 1.5rem;">
+                <li>Mobile device location tracking (within the limits permitted by Nigerian law)</li>
+                <li>Cryptocurrency fraud investigation, tracing, and reporting</li>
+                <li>Security intelligence advisory services</li>
+            </ol>
+        </div>
+
+        <!-- 2. Legal Compliance -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">2. Legal Compliance</h5>
+            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                <li>The Service Provider shall render all services in compliance with the Nigeria Police Act</li>
+                <li>The Service Provider reserves the right to refuse any request deemed unlawful or unethical</li>
+            </ul>
+        </div>
+
+        <!-- 3. Limitations of Service -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">3. Limitations of Service</h5>
+            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                <li>While the Service Provider shall apply industry-approved investigative methods, no guarantee of 100% success or accuracy is made, as technical limitations or unforeseen circumstances may affect outcomes</li>
+            </ul>
+        </div>
+
+        <!-- 4. Client Responsibilities -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">4. Client Responsibilities</h5>
+            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                <li>The Client must provide truthful, accurate, and complete information necessary for the execution of services</li>
+            </ul>
+        </div>
+
+        <!-- 5. Confidentiality -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">5. Confidentiality</h5>
+            <p style="margin: 0.5rem 0;">Both parties agree to maintain strict confidentiality over all sensitive information exchanged during the course of this Agreement.</p>
+        </div>
+
+        <!-- 6. Fees & Payment -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">6. Fees & Payment</h5>
+            <p style="margin: 0.5rem 0;"><strong>Payment Terms:</strong></p>
+            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                <li>The Client shall pay the agreed service fee before commencement of service</li>
+                <li>No refunds shall be issued once investigative work has begun</li>
+            </ul>
+        </div>
+
+        <!-- Bank Details -->
+        <div style="background: #e8f4f8; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; color: #2c3e50;">
+            <p style="margin: 0 0 1rem 0;"><strong>Phemedia Onguard Services Ltd</strong></p>
+            <p style="margin: 0.5rem 0;"><strong>Moniepoint Microfinance Bank Account:</strong> 6707932476</p>
+            <p style="margin: 0.5rem 0;"><strong>OR</strong></p>
+            <p style="margin: 0.5rem 0;"><strong>Providus Bank Account:</strong> 1306872171</p>
+        </div>
+
+        <!-- 7. Limitation of Liability -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">7. Limitation of Liability</h5>
+            <p style="margin: 0.5rem 0;">The Service Provider shall not be liable for any indirect, incidental, or consequential damages arising from the use or results of the services provided.</p>
+        </div>
+
+        <!-- 8. Termination -->
+        <div style="margin-bottom: 2rem;">
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">8. Termination</h5>
+            <p style="margin: 0.5rem 0;">Either party may terminate this Agreement with written notice. However, fees paid are non-refundable.</p>
+        </div>
+
+        <!-- 9. Governing Law -->
+        <div>
+            <h5 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">9. Governing Law</h5>
+            <p style="margin: 0.5rem 0;">This Agreement shall be governed by and construed in accordance with the laws of the Federal Republic of Nigeria.</p>
+        </div>
+    </div>
+
+    <!-- Client Signature Form -->
+    <form id="clientAcceptanceForm" onsubmit="submitClientAcceptance(event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="background: #e8f4f8; padding: 1.5rem; border-radius: 6px; margin-bottom: 2rem;">
+            <h4 style="margin-top: 0; color: #2c3e50;">Client Acceptance & Signature</h4>
+            
+            <div class="form-group">
+                <label for="client_acceptance_name" class="required">Full Name (as it should appear on the agreement)</label>
+                <input type="text" id="client_acceptance_name" name="client_acceptance_name" placeholder="Your Full Name" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="client_acceptance_phone" class="required">Phone Number</label>
+                    <input type="tel" id="client_acceptance_phone" name="client_acceptance_phone" placeholder="Phone Number" required>
+                </div>
+                <div class="form-group">
+                    <label for="acceptance_date" class="required">Date</label>
+                    <input type="date" id="acceptance_date" name="acceptance_date" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="client_acceptance_address" class="required">Full Address</label>
+                <textarea id="client_acceptance_address" name="client_acceptance_address" placeholder="Your Full Address" required style="min-height: 80px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="required">Digital Signature</label>
+                <p style="font-size: 13px; color: #666; margin-bottom: 0.5rem;">Please sign in the box below. Use your mouse or touch screen to draw your signature.</p>
+                <canvas id="signatureCanvas" style="display: block; width: 100%; height: 150px; border: 2px solid #3498db; cursor: crosshair; background-color: white; border-radius: 4px; margin-bottom: 0.5rem;"></canvas>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <button type="button" onclick="clearSignature()" class="btn btn-secondary" style="flex: 1;">Clear Signature</button>
+                    <button type="button" onclick="saveSignature()" class="btn btn-primary" style="flex: 1;">Save Signature</button>
+                </div>
+                <div id="signatureSaveMsg" style="display: none; color: #27ae60; font-weight: bold; margin-bottom: 1rem;">✓ Signature saved successfully</div>
+                
+                <p style="text-align: center; color: #7f8c8d; margin: 1rem 0;">OR</p>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="signatureUpload">Upload Signature Image:</label>
+                    <input type="file" id="signatureUpload" accept="image/*" onchange="handleSignatureUpload(event)" style="margin-top: 0.5rem;">
+                </div>
+                <div id="uploadedSigPreview" style="margin-bottom: 1rem;"></div>
+                <input type="hidden" id="clientSignatureData" name="clientSignatureData" required>
+                <input type="hidden" id="clientSignatureData_drawn" name="clientSignatureData_drawn">
+                <input type="hidden" id="clientSignatureData_uploaded" name="clientSignatureData_uploaded">
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="terms_agreed" name="terms_agreed" value="yes" required>
+                    <label for="terms_agreed" class="required">I have read and fully understand this Investigative Service Agreement and accept all terms and conditions</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">Sign & Submit Agreement</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #d5f4e6; border-radius: 6px; color: #27ae60;">
+        <p style="margin: 0;"><strong>✓ Legally Binding</strong><br>
+        By signing this agreement, you confirm that you have read, understood, and agree to all terms and conditions. This agreement will be legally binding.</p>
+    </div>
+</div>
+{% endblock %}

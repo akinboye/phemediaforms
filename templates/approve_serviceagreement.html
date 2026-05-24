@@ -1,0 +1,694 @@
+{% extends "base.html" %}
+
+{% block title %}Approve Service Agreement - PHEMEDAA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 6px;
+        border-left: 4px solid;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border-left-color: #0c5460;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border-left-color: #155724;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border-left-color: #856404;
+    }
+
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border-left-color: #721c24;
+    }
+
+    .alert ul {
+        padding-left: 1.5rem;
+        margin: 0;
+    }
+
+    .alert li {
+        margin-bottom: 0.25rem;
+    }
+
+    .approval-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+    }
+
+    .approval-header {
+        border-bottom: 2px solid #27ae60;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .approval-header h1 {
+        color: #27ae60;
+        margin: 0 0 0.5rem 0;
+        font-size: 1.8rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        background: #fff3cd;
+        color: #856404;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .agreement-summary {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-item {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .value {
+        color: #555;
+        margin-top: 0.3rem;
+        word-break: break-word;
+    }
+
+    .approval-form {
+        background: #f5f7fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 2rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section h3 {
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="email"] {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid #bdc3c7;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .signature-container {
+        margin-top: 1rem;
+    }
+
+    .signature-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .signature-canvas {
+        border: 2px solid #3498db;
+        border-radius: 6px;
+        background: white;
+        display: block;
+        margin-bottom: 1rem;
+        cursor: crosshair;
+    }
+
+    .signature-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-small {
+        background: #95a5a6;
+        color: white;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.3s;
+    }
+
+    .btn-small:hover {
+        background: #7f8c8d;
+    }
+
+    .btn-clear {
+        background: #e74c3c;
+    }
+
+    .btn-clear:hover {
+        background: #c0392b;
+    }
+
+    .upload-signature {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #bdc3c7;
+    }
+
+    .upload-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+
+    .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: -9999px;
+    }
+
+    .file-input-label {
+        display: inline-block;
+        background: #3498db;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.3s;
+        font-weight: 600;
+    }
+
+    .file-input-label:hover {
+        background: #2980b9;
+    }
+
+    .uploaded-sig-preview {
+        margin-top: 0.5rem;
+        max-width: 200px;
+        max-height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 0.5rem;
+    }
+
+    .approval-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-approve {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 0.8rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .btn-approve:hover {
+        background: #229954;
+    }
+
+    .btn-cancel {
+        background: #95a5a6;
+        color: white;
+        text-decoration: none;
+        border: none;
+        padding: 0.8rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+        display: inline-block;
+    }
+
+    .btn-cancel:hover {
+        background: #7f8c8d;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-error {
+        background: #fadbd8;
+        color: #e74c3c;
+        border-left: 4px solid #e74c3c;
+    }
+
+    @media (max-width: 768px) {
+        .approval-container {
+            margin: 1rem;
+            padding: 1.5rem;
+        }
+
+        .approval-buttons {
+            flex-direction: column;
+        }
+
+        .btn-approve, .btn-cancel {
+            width: 100%;
+        }
+
+        .approval-form {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.js"></script>
+<script>
+    let signaturePad;
+    let uploadedSignature = null;
+    let isDrawing = false;
+    let ctx = null;
+
+    // Basic fallback drawing implementation
+    function setupBasicDrawing(canvas) {
+        ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            isDrawing = false;
+        });
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.beginPath();
+            ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isDrawing = false;
+        });
+    }
+
+    // Wait for SignaturePad to load
+    function waitForSignaturePad() {
+        return new Promise((resolve) => {
+            if (typeof SignaturePad !== 'undefined') {
+                resolve(true);
+            } else {
+                const maxAttempts = 20;
+                let attempts = 0;
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    if (typeof SignaturePad !== 'undefined' || attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        resolve(attempts < maxAttempts);
+                    }
+                }, 100);
+            }
+        });
+    }
+
+    async function initSignaturePad() {
+        const canvas = document.getElementById('approvalSignatureCanvas');
+        if (!canvas) return;
+
+        const sigPadLoaded = await waitForSignaturePad();
+        
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        if (sigPadLoaded && typeof SignaturePad !== 'undefined') {
+            // Use SignaturePad library
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)'
+            });
+            console.log('SignaturePad library initialized');
+        } else {
+            // Use basic fallback drawing
+            setupBasicDrawing(canvas);
+            console.log('Using fallback canvas drawing (SignaturePad library not available)');
+        }
+    }
+
+    function clearSignature() {
+        const canvas = document.getElementById('approvalSignatureCanvas');
+        if (signaturePad && typeof signaturePad.clear === 'function') {
+            signaturePad.clear();
+        } else if (canvas && ctx) {
+            // Clear canvas with basic drawing
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    function clearUpload() {
+        uploadedSignature = null;
+        document.getElementById('uploadedSigPreview').innerHTML = '';
+        document.getElementById('signatureUpload').value = '';
+    }
+
+    function handleSignatureUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedSignature = e.target.result;
+                document.getElementById('uploadedSigPreview').innerHTML = 
+                    `<img src="${e.target.result}" class="uploaded-sig-preview" alt="Uploaded Signature">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('statusMessage');
+        statusDiv.textContent = message;
+        statusDiv.style.display = 'block';
+        
+        if (type === 'error') {
+            statusDiv.style.background = '#fadbd8';
+            statusDiv.style.color = '#e74c3c';
+            statusDiv.style.borderLeft = '4px solid #e74c3c';
+        } else if (type === 'success') {
+            statusDiv.style.background = '#d5f4e6';
+            statusDiv.style.color = '#27ae60';
+            statusDiv.style.borderLeft = '4px solid #27ae60';
+        } else {
+            statusDiv.style.background = '#d6eaf8';
+            statusDiv.style.color = '#2874a6';
+            statusDiv.style.borderLeft = '4px solid #2874a6';
+        }
+    }
+
+    function submitApproval(event) {
+        event.preventDefault();
+        console.log('=== submitApproval START ===');
+        showStatus('Processing your approval...', 'info');
+
+        const approverName = document.getElementById('approver_name').value.trim();
+        const approverEmail = document.getElementById('approver_email').value.trim();
+        const approverPosition = document.getElementById('approver_position').value.trim();
+
+        console.log('Field values:');
+        console.log('  Name:', approverName);
+        console.log('  Email:', approverEmail);
+        console.log('  Position:', approverPosition);
+
+        // Validation
+        if (!approverName) {
+            showStatus('❌ ERROR: Please enter your name', 'error');
+            document.getElementById('approver_name').focus();
+            return false;
+        }
+
+        if (!approverEmail) {
+            showStatus('❌ ERROR: Please enter your email', 'error');
+            document.getElementById('approver_email').focus();
+            return false;
+        }
+
+        if (!approverPosition) {
+            showStatus('❌ ERROR: Please enter your position/title', 'error');
+            document.getElementById('approver_position').focus();
+            return false;
+        }
+
+        // Get drawn signature
+        let drawnSignatureData = null;
+        const canvas = document.getElementById('approvalSignatureCanvas');
+        if (canvas) {
+            if (signaturePad && typeof signaturePad.isEmpty === 'function') {
+                if (!signaturePad.isEmpty()) {
+                    drawnSignatureData = signaturePad.toDataURL('image/png');
+                }
+            } else if (ctx) {
+                const canvasData = canvas.toDataURL('image/png');
+                const isBlank = canvasData === document.createElement('canvas').toDataURL('image/png');
+                if (!isBlank) {
+                    drawnSignatureData = canvasData;
+                }
+            }
+        }
+
+        // Get uploaded signature
+        const uploadedSigData = uploadedSignature;
+
+        if (!drawnSignatureData && !uploadedSigData) {
+            showStatus('❌ ERROR: Please draw your signature or upload a signature/stamp image', 'error');
+            return false;
+        }
+
+        showStatus('✓ All fields validated. Sending approval...', 'info');
+
+        // Set the signature data fields and submit
+        try {
+            if (drawnSignatureData) {
+                document.getElementById('approvalSignatureData_drawn').value = drawnSignatureData;
+            }
+            if (uploadedSigData) {
+                document.getElementById('approvalSignatureData').value = uploadedSigData;
+            }
+
+            const form = document.getElementById('approvalForm');
+            if (!form) {
+                showStatus('❌ ERROR: Form not found', 'error');
+                return false;
+            }
+
+            form.submit();
+            showStatus('✓ Approval submitted! Redirecting...', 'success');
+        } catch (error) {
+            console.error('Error during submission:', error);
+            showStatus('❌ ERROR: ' + error.message, 'error');
+            return false;
+        }
+    }
+
+    window.addEventListener('load', initSignaturePad);
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/superadmin/dashboard" class="back-button" style="display: inline-block; margin-bottom: 1rem; color: #3498db; text-decoration: none;">← Back to Dashboard</a>
+
+<!-- Display Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="approval-container">
+    <div class="approval-header">
+        <h1>✓ Approve Service Agreement</h1>
+        <span class="status-badge">⏳ PENDING APPROVAL</span>
+    </div>
+
+    <!-- Agreement Summary -->
+    <div class="agreement-summary">
+        <h3 style="color: #2c3e50; margin-top: 0; margin-bottom: 1.5rem;">Agreement Summary</h3>
+        
+        <div class="summary-item">
+            <div class="label">Submission ID</div>
+            <div class="value">#{{ submission.id }}</div>
+        </div>
+
+        <div class="summary-item">
+            <div class="label">Submitted At</div>
+            <div class="value">{{ submission.submitted_at.strftime('%d %B %Y at %H:%M:%S') }}</div>
+        </div>
+
+        <div class="summary-item">
+            <div class="label">Client Email</div>
+            <div class="value">{{ submission.submitted_data.get('client_email') or submission.user_email or 'N/A' }}</div>
+        </div>
+
+        <div class="summary-item">
+            <div class="label">Client Name</div>
+            <div class="value">{{ submission.submitted_data.get('client_name', 'N/A') }}</div>
+        </div>
+
+        <div class="summary-item">
+            <div class="label">Agreement Date</div>
+            <div class="value">{{ submission.submitted_data.get('agreement_date', 'N/A') }}</div>
+        </div>
+
+        <div class="summary-item">
+            <div class="label">Client Phone</div>
+            <div class="value">{{ submission.submitted_data.get('client_phone', 'N/A') }}</div>
+        </div>
+    </div>
+
+    <!-- Approval Form -->
+    <div id="statusMessage" style="display: none; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; font-weight: 600;">
+    </div>
+    
+    <form id="approvalForm" method="POST" action="/admin/approve-agreement/{{ submission.id }}" class="approval-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- Approver Information -->
+        <div class="form-section">
+            <h3>Approver Information</h3>
+            
+            <div class="form-group">
+                <label for="approver_name" class="required">Your Full Name *</label>
+                <input type="text" id="approver_name" name="approver_name" placeholder="Enter your full name">
+            </div>
+
+            <div class="form-group">
+                <label for="approver_email" class="required">Your Email Address *</label>
+                <input type="email" id="approver_email" name="approver_email" placeholder="Enter your email">
+            </div>
+
+            <div class="form-group">
+                <label for="approver_position" class="required">Your Position/Title *</label>
+                <input type="text" id="approver_position" name="approver_position" placeholder="e.g., Operations Manager, Director">
+            </div>
+        </div>
+
+        <!-- Approval Signature -->
+        <div class="form-section">
+            <h3>Approval Signature</h3>
+            
+            <div class="form-group">
+                <div class="signature-label">Draw Your Signature Below:</div>
+                <canvas id="approvalSignatureCanvas" class="signature-canvas" width="500" height="150"></canvas>
+                
+                <div class="signature-buttons">
+                    <button type="button" class="btn-small btn-clear" onclick="clearSignature()">🔄 Clear Drawing</button>
+                </div>
+
+                <div class="upload-signature">
+                    <div class="upload-label">Also / Alternatively Upload Signature or Stamp Image:</div>
+                    <div class="file-input-wrapper">
+                        <label for="signatureUpload" class="file-input-label">📤 Upload Image</label>
+                        <input type="file" id="signatureUpload" name="signature_upload" accept="image/*" onchange="handleSignatureUpload(event)">
+                    </div>
+                    <div id="uploadedSigPreview"></div>
+                    <button type="button" class="btn-small btn-clear" onclick="clearUpload()" style="margin-top:0.5rem;">✕ Remove</button>
+                </div>
+
+                <input type="hidden" id="approvalSignatureData_drawn" name="signature_data_drawn">
+                <input type="hidden" id="approvalSignatureData" name="signature_data">
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="approval-buttons">
+            <button type="button" class="btn-approve" onclick="submitApproval(event)">
+                ✓ Approve & Send to Client
+            </button>
+            <a href="/superadmin/dashboard" class="btn-cancel">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

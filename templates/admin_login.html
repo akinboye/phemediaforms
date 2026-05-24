@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login - PHEMEDAA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        max-width: 450px;
+        margin: 3rem auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 3rem 2rem;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .login-header h2 {
+        color: #2c3e50;
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .login-header p {
+        color: #7f8c8d;
+        font-size: 0.95rem;
+    }
+
+    .login-form {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group-login {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group-login label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .form-group-login input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #bdc3c7;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-group-login input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .login-button {
+        background: #3498db;
+        color: white;
+        padding: 0.8rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        margin-top: 0.5rem;
+    }
+
+    .login-button:hover {
+        background: #2980b9;
+    }
+
+    .login-button:active {
+        transform: scale(0.98);
+    }
+
+    .alert-login {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .alert-error-login {
+        background: #fadbd8;
+        color: #c0392b;
+        border: 1px solid #f5b7b1;
+    }
+
+    .alert-info-login {
+        background: #d6eaf8;
+        color: #0c5aa0;
+        border: 1px solid #aed6f1;
+    }
+
+    .login-info {
+        background: #ecf0f1;
+        border-left: 4px solid #3498db;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 2rem;
+        font-size: 0.9rem;
+        color: #34495e;
+    }
+
+    .login-info h4 {
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-size: 0.95rem;
+    }
+
+    .login-info p {
+        margin: 0.3rem 0;
+    }
+
+    .back-link {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+
+    .back-link a {
+        color: #3498db;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+
+    .back-link a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+        .login-container {
+            margin: 1rem;
+            padding: 1.5rem 1rem;
+        }
+
+        .login-header h2 {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-header">
+        <h2>🔐 Admin Login</h2>
+        <p>PHEMEDAA Forms Administration</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert-login alert-{{ category }}-login">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="login-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group-login">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required autofocus placeholder="Enter your username">
+        </div>
+
+        <div class="form-group-login">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required placeholder="Enter your password">
+        </div>
+
+        <button type="submit" class="login-button">Sign In</button>
+    </form>
+
+    <div class="login-info">
+        <h4>📌 Login Information</h4>
+        <p><strong>Superadmin:</strong> Default login credentials (contact system administrator)</p>
+        <p><strong>Admin:</strong> Use credentials created by superadmin</p>
+        <p><strong>Both:</strong> Can access form submissions and email settings</p>
+    </div>
+
+    <div class="back-link">
+        <a href="/">← Back to Home</a>
+    </div>
+</div>
+{% endblock %}

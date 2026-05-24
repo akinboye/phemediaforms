@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+
+{% block title %}Superadmin Dashboard - PHEMEDAA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-container {
+        background: #f5f7fa;
+        min-height: calc(100vh - 200px);
+        padding: 2rem 0;
+    }
+
+    .admin-sidebar {
+        position: sticky;
+        top: 100px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .admin-sidebar h3 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.5rem;
+    }
+
+    .nav-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .nav-menu li {
+        margin: 0.5rem 0;
+    }
+
+    .nav-menu a {
+        display: block;
+        padding: 0.8rem 1rem;
+        color: #34495e;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+    .nav-menu a:hover,
+    .nav-menu a.active {
+        background: #3498db;
+        color: white;
+    }
+
+    .admin-content {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #ecf0f1;
+        padding-bottom: 1rem;
+    }
+
+    .admin-header h2 {
+        color: #2c3e50;
+        margin: 0;
+        font-size: 1.8rem;
+    }
+
+    .btn-primary {
+        background: #3498db;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: #2980b9;
+    }
+
+    .btn-danger {
+        background: #e74c3c;
+        color: white;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-danger:hover {
+        background: #c0392b;
+    }
+
+    .btn-warning {
+        background: #f39c12;
+        color: white;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-warning:hover {
+        background: #d68910;
+    }
+
+    .btn-success {
+        background: #27ae60;
+        color: white;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-success:hover {
+        background: #229954;
+    }
+
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+
+    .admin-table thead {
+        background: #ecf0f1;
+    }
+
+    .admin-table th {
+        padding: 1rem;
+        text-align: left;
+        color: #2c3e50;
+        font-weight: 600;
+        border-bottom: 2px solid #bdc3c7;
+    }
+
+    .admin-table td {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    .admin-table tbody tr:hover {
+        background: #f9f9f9;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #d5f4e6;
+        color: #27ae60;
+    }
+
+    .status-inactive {
+        background: #fadbd8;
+        color: #e74c3c;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .logout-btn {
+        background: #e74c3c;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .logout-btn:hover {
+        background: #c0392b;
+    }
+
+    .welcome-box {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+
+    .welcome-box h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.3rem;
+    }
+
+    .welcome-box p {
+        margin: 0;
+        opacity: 0.9;
+    }
+
+    .form-section {
+        display: none;
+    }
+
+    .form-section.active {
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        .admin-container {
+            padding: 1rem;
+        }
+
+        .admin-sidebar {
+            margin-bottom: 1rem;
+            position: static;
+        }
+
+        .admin-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 0.5rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .btn-primary,
+        .btn-danger,
+        .btn-warning,
+        .btn-success {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container container">
+    <div class="admin-header" style="margin-bottom: 1rem;">
+        <h1>🔐 Superadmin Dashboard</h1>
+        <a href="/admin_logout" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="admin-sidebar">
+                <h3>📊 Navigation</h3>
+                <ul class="nav-menu">
+                    <li><a href="#" onclick="showSection('admins'); return false;" class="nav-item active" data-section="admins">👥 Manage Admins</a></li>
+                    <li><a href="#" onclick="showSection('submissions'); return false;" class="nav-item" data-section="submissions">📋 Form Submissions</a></li>
+                    <li><a href="#" onclick="showSection('emails'); return false;" class="nav-item" data-section="emails">📧 Email Settings</a></li>
+                    <li><a href="/superadmin/company-address" class="nav-item">🏢 Company Address</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="welcome-box">
+                <h3>Welcome, Superadmin!</h3>
+                <p>Manage admin users, view form submissions, configure notification emails, and manage company address settings.</p>
+            </div>
+
+            <!-- ADMINS SECTION -->
+            <div id="admins" class="form-section active">
+                <div class="admin-content">
+                    <div class="admin-header">
+                        <h2>👥 Manage Admin Users</h2>
+                        <a href="#" onclick="showCreateAdminForm(); return false;" class="btn-primary">➕ Create New Admin</a>
+                    </div>
+
+                    {% if admins %}
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Username</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for admin in admins %}
+                                <tr>
+                                    <td>{{ admin.first_name }} {{ admin.last_name }}</td>
+                                    <td>{{ admin.email }}</td>
+                                    <td>{{ admin.phone_number }}</td>
+                                    <td>{{ admin.username }}</td>
+                                    <td>
+                                        <span class="status-badge {% if admin.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                            {% if admin.is_active %}✓ Active{% else %}✗ Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ admin.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="/superadmin/admin/{{ admin.id }}/edit" class="btn-warning">Edit</a>
+                                            {% if admin.is_active %}
+                                            <form method="POST" action="/superadmin/admin/{{ admin.id }}/toggle" style="display: inline;">
+                                                {{ csrf_token() }}
+                                                <button type="submit" class="btn-danger" onclick="return confirm('Disable this admin?')">Disable</button>
+                                            </form>
+                                            {% else %}
+                                            <form method="POST" action="/superadmin/admin/{{ admin.id }}/toggle" style="display: inline;">
+                                                {{ csrf_token() }}
+                                                <button type="submit" class="btn-success">Enable</button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: #7f8c8d; padding: 2rem;">No admin users created yet. <a href="#" onclick="showCreateAdminForm(); return false;">Create one now</a></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- FORM SUBMISSIONS SECTION -->
+            <div id="submissions" class="form-section">
+                <div class="admin-content">
+                    <h2>📋 Form Submissions</h2>
+                    <p style="color: #7f8c8d; margin-bottom: 1.5rem;">View submissions for each form type</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <a href="#" onclick="showSubmissions('backgroundcheck'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">📋 Background Check</a>
+                        <a href="#" onclick="showSubmissions('clientengagement'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">🏢 Client Engagement</a>
+                        <a href="#" onclick="showSubmissions('declarationbyemployee'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">📝 Declarations</a>
+                        <a href="#" onclick="showSubmissions('guarantorundertaking'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">🤝 Guarantor</a>
+                        <a href="#" onclick="showSubmissions('oilgasservicerequest'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">⛽ Oil & Gas</a>
+                        <a href="#" onclick="showSubmissions('serviceagreement'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">✅ Service Agreements</a>
+                        <a href="#" onclick="showSubmissions('trackingagreement'); return false;" class="btn-primary" style="text-align: center; text-decoration: none;">📍 Tracking</a>
+                    </div>
+
+                    <div id="submissions-container" style="display: none;">
+                        <a href="#" onclick="hideSubmissions(); return false;" style="color: #3498db; text-decoration: none;">← Back</a>
+                        <div id="submissions-table"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EMAIL SETTINGS SECTION -->
+            <div id="emails" class="form-section">
+                <div class="admin-content">
+                    <div class="admin-header">
+                        <h2>📧 Notification Emails</h2>
+                        <a href="#" onclick="showAddEmailForm(); return false;" class="btn-primary">➕ Add Email</a>
+                    </div>
+
+                    {% if notification_emails %}
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Email Address</th>
+                                    <th>Form Type</th>
+                                    <th>Status</th>
+                                    <th>Added By</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for email in notification_emails %}
+                                <tr>
+                                    <td>{{ email.email }}</td>
+                                    <td>{% if email.form_type == 'all' %}<strong>All Forms</strong>{% else %}{{ email.form_type }}{% endif %}</td>
+                                    <td>
+                                        <span class="status-badge {% if email.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                            {% if email.is_active %}✓ Active{% else %}✗ Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ email.added_by_admin or email.added_by_superadmin or 'System' }}</td>
+                                    <td>{{ email.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="/superadmin/email/{{ email.id }}/edit" class="btn-warning">Edit</a>
+                                            {% if email.is_active %}
+                                            <form method="POST" action="/superadmin/email/{{ email.id }}/toggle" style="display: inline;">
+                                                {{ csrf_token() }}
+                                                <button type="submit" class="btn-danger" onclick="return confirm('Disable this email?')">Disable</button>
+                                            </form>
+                                            {% else %}
+                                            <form method="POST" action="/superadmin/email/{{ email.id }}/toggle" style="display: inline;">
+                                                {{ csrf_token() }}
+                                                <button type="submit" class="btn-success">Enable</button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: #7f8c8d; padding: 2rem;">No notification emails configured yet. <a href="#" onclick="showAddEmailForm(); return false;">Add one now</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.form-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    // Remove active from all nav items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Show selected section
+    document.getElementById(sectionId).classList.add('active');
+    
+    // Add active to clicked nav item
+    event.target.classList.add('active');
+}
+
+function showCreateAdminForm() {
+    window.location.href = '/superadmin/admin/create';
+}
+
+function showSubmissions(formType) {
+    document.getElementById('submissions-container').style.display = 'block';
+    
+    fetch(`/superadmin/submissions/${formType}`)
+        .then(response => response.json())
+        .then(data => {
+            let html = `<h3>Submissions: ${formType}</h3>`;
+            if (data.submissions && data.submissions.length > 0) {
+                
+                // Check if it's tracking agreement or client signature forms
+                const isTracking = formType === 'trackingagreement';
+                const isClientSignature = ['serviceagreement', 'oilgasservicerequest'].includes(formType);
+                const headers = (isTracking || isClientSignature) ? 
+                    '<tr style="background: #ecf0f1;"><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Email</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Client Link</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Submitted</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Status</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">PDF</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Action</th></tr>' :
+                    '<tr style="background: #ecf0f1;"><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Date Submitted</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Email</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Status</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">PDF</th><th style="padding: 0.8rem; text-align: left; border-bottom: 2px solid #bdc3c7;">Action</th></tr>';
+                
+                html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse;"><thead>' + headers + '</thead><tbody>';
+                
+                data.submissions.forEach(sub => {
+                    if (isTracking || isClientSignature) {
+                        const submitDate = new Date(sub.submitted_at).toLocaleDateString();
+                        const clientSigned = sub.client_acceptance_completed ? 
+                            '<span style="background: #d4edda; color: #155724; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">✓ Signed</span>' :
+                            '<span style="background: #f8d7da; color: #721c24; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">⏳ Pending</span>';
+                        
+                        let resendBtn = '';
+                        if (!sub.client_acceptance_completed) {
+                            resendBtn = `<button onclick="resendLink(${sub.id})" style="background: #f39c12; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📧 Resend</button>`;
+                        } else if (isTracking && (sub.status === 'pending_approval' || sub.status === 'submitted')) {
+                            resendBtn = `<a href="/admin/approve-trackingagreement/${sub.id}" style="background: #27ae60; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px; margin-right: 0.5rem; font-weight: 600;">✓ Approve</a>`;
+                        }
+                        
+                        let pdfButton;
+                        if (sub.pdf_filename || sub.final_pdf_filename) {
+                            pdfButton = `<a href="/submission/${sub.id}/pdf" target="_blank" style="background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px;">📄 PDF</a>`;
+                        } else if (!sub.client_acceptance_completed) {
+                            pdfButton = '<span style="color: #bbb; font-size: 0.9rem;">—</span>';
+                        } else if (isTracking && (sub.status === 'pending_approval' || sub.status === 'submitted')) {
+                            pdfButton = '<span style="color: #f39c12; font-size: 0.9rem; font-weight: 600;">⏳ Awaiting Approval</span>';
+                        } else {
+                            pdfButton = '<span style="color: #999; font-size: 0.9rem;">No PDF</span>';
+                        }
+                        
+                        html += `<tr style="border-bottom: 1px solid #ecf0f1;">`;
+                        html += `<td style="padding: 0.8rem;"><strong>${sub.user_email || 'N/A'}</strong></td>`;
+                        html += `<td style="padding: 0.8rem;"><a href="${sub.client_acceptance_link}" target="_blank" style="color: #3498db; text-decoration: none; word-break: break-all; font-size: 0.9rem;" title="${sub.client_acceptance_link}">📋 Copy Link</a></td>`;
+                        html += `<td style="padding: 0.8rem;">${submitDate}</td>`;
+                        html += `<td style="padding: 0.8rem;">${clientSigned}</td>`;
+                        html += `<td style="padding: 0.8rem;">${pdfButton}</td>`;
+                        html += `<td style="padding: 0.8rem;">${resendBtn}<a href="/superadmin/submission/${sub.id}" style="background: #27ae60; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px;">View</a></td>`;
+                        html += '</tr>';
+                    } else {
+                        const date = new Date(sub.submitted_at).toLocaleString();
+                        const status = sub.status || 'pending';
+                        const statusBadge = status === 'approved' ? 
+                            '<span style="background: #d4edda; color: #155724; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">✓ Approved</span>' :
+                            '<span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">⏳ Pending</span>';
+                        
+                        let pdfButton;
+                        if (formType === 'serviceagreement') {
+                            const pdfLink = sub.pdf_filename ? `<a href="/submission/${sub.id}/pdf" target="_blank" style="background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px; margin-right: 0.3rem;">📄 PDF</a>` : '';
+                            pdfButton = pdfLink + `<button onclick="regenerateServiceagreementPdf(${sub.id}, this)" style="background: #e67e22; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer;">🔄 Regen PDF</button>`;
+                        } else if (sub.pdf_filename) {
+                            pdfButton = `<a href="/submission/${sub.id}/pdf" target="_blank" style="background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px;">📄 PDF</a>`;
+                        } else if (formType === 'backgroundcheck' && status === 'approved') {
+                            pdfButton = `<button onclick="regenerateBackgroundcheckPdf(${sub.id}, this)" style="background: #e67e22; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer;">🔄 Regenerate PDF</button>`;
+                        } else if (formType === 'clientengagement' && status === 'approved') {
+                            pdfButton = `<button onclick="regenerateClientengagementPdf(${sub.id}, this)" style="background: #e67e22; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer;">🔄 Regenerate PDF</button>`;
+                        } else {
+                            pdfButton = '<span style="color: #999; font-size: 0.9rem;">No PDF</span>';
+                        }
+                        
+                        const approveBtn = (formType === 'backgroundcheck' && status === 'pending_approval') ?
+                            `<a href="/admin/approve-backgroundcheck/${sub.id}" style="background: #27ae60; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px; margin-right: 0.5rem;">✓ Approve</a>` : '';
+                        
+                        html += `<tr style="border-bottom: 1px solid #ecf0f1;"><td style="padding: 0.8rem;">${date}</td>`;
+                        html += `<td style="padding: 0.8rem;">${sub.user_email || 'N/A'}</td>`;
+                        html += `<td style="padding: 0.8rem;">${statusBadge}</td>`;
+                        html += `<td style="padding: 0.8rem;">${pdfButton}</td>`;
+                        html += `<td style="padding: 0.8rem;">${approveBtn}<a href="/superadmin/submission/${sub.id}" style="background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px;">View Details</a></td>`;
+                        html += '</tr>';
+                    }
+                });
+                html += '</tbody></table></div>';
+            } else {
+                html += '<p style="color: #7f8c8d; text-align: center; padding: 2rem;">No submissions found for this form type.</p>';
+            }
+            document.getElementById('submissions-table').innerHTML = html;
+        });
+}
+
+function hideSubmissions() {
+    document.getElementById('submissions-container').style.display = 'none';
+}
+
+function regenerateBackgroundcheckPdf(submissionId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    fetch(`/admin/regenerate-backgroundcheck-pdf/${submissionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            btn.outerHTML = `<a href="/submission/${submissionId}/pdf" target="_blank" style="background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px;">📄 PDF</a>`;
+        } else {
+            btn.disabled = false;
+            btn.textContent = '🔄 Regenerate PDF';
+            alert('Failed to regenerate PDF: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 Regenerate PDF';
+        alert('Network error while regenerating PDF');
+    });
+}
+
+function regenerateClientengagementPdf(submissionId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    fetch(`/admin/regenerate-clientengagement-pdf/${submissionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            btn.outerHTML = `<a href="/submission/${submissionId}/pdf" target="_blank" style="background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px;">📄 PDF</a>`;
+        } else {
+            btn.disabled = false;
+            btn.textContent = '🔄 Regenerate PDF';
+            alert('Failed to regenerate PDF: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 Regenerate PDF';
+        alert('Network error while regenerating PDF');
+    });
+}
+
+function regenerateServiceagreementPdf(submissionId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    fetch(`/admin/regenerate-serviceagreement-pdf/${submissionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            btn.disabled = false;
+            btn.textContent = '🔄 Regen PDF';
+            const existing = btn.previousSibling;
+            if (!existing || existing.tagName !== 'A') {
+                const link = document.createElement('a');
+                link.href = `/submission/${submissionId}/pdf`;
+                link.target = '_blank';
+                link.style = 'background: #3498db; color: white; padding: 0.4rem 0.8rem; text-decoration: none; border-radius: 4px; margin-right: 0.3rem;';
+                link.textContent = '📄 PDF';
+                btn.parentNode.insertBefore(link, btn);
+            }
+        } else {
+            btn.disabled = false;
+            btn.textContent = '🔄 Regen PDF';
+            alert('Failed to regenerate PDF: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 Regen PDF';
+        alert('Network error while regenerating PDF');
+    });
+}
+function resendLink(submissionId) {
+    if (confirm('Are you sure you want to resend the acceptance link to the client?')) {
+        fetch(`/superadmin/resend-acceptance-link/${submissionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✓ Link resent successfully to client email');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => alert('Error: ' + error));
+    }
+}
+
+function showAddEmailForm() {
+    window.location.href = '/superadmin/email/create';
+}
+</script>
+{% endblock %}

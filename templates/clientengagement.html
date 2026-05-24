@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Client Engagement Form & Agreement - Phemedia Onguard Services Ltd{% endblock %}
+
+{% block extra_js %}
+<script>
+    let signaturePad;
+    let uploadedSignature = null;
+    let isDrawing = false;
+    let ctx = null;
+
+    // Basic fallback drawing implementation
+    function setupBasicDrawing(canvas) {
+        ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDrawing = false; });
+        canvas.addEventListener('mouseout', () => { isDrawing = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.beginPath();
+            ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('touchend', () => { isDrawing = false; });
+    }
+
+    // Wait for SignaturePad to load
+    function waitForSignaturePad() {
+        return new Promise((resolve) => {
+            if (typeof SignaturePad !== 'undefined') {
+                resolve(true);
+            } else {
+                const maxAttempts = 20;
+                let attempts = 0;
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    if (typeof SignaturePad !== 'undefined' || attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        resolve(attempts < maxAttempts);
+                    }
+                }, 100);
+            }
+        });
+    }
+
+    async function initSignaturePad() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+
+        const sigPadLoaded = await waitForSignaturePad();
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        if (sigPadLoaded && typeof SignaturePad !== 'undefined') {
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)'
+            });
+        } else {
+            setupBasicDrawing(canvas);
+        }
+    }
+
+    function clearSignature() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (signaturePad && typeof signaturePad.clear === 'function') {
+            signaturePad.clear();
+        } else if (canvas && ctx) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        uploadedSignature = null;
+        document.getElementById('uploadedSigPreview').innerHTML = '';
+    }
+
+    function saveSignature() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+        
+        const canvasData = canvas.toDataURL('image/png');
+        const isBlank = canvasData === document.createElement('canvas').toDataURL('image/png');
+        
+        let hasSignature = false;
+        if (signaturePad && typeof signaturePad.isEmpty === 'function') {
+            hasSignature = !signaturePad.isEmpty();
+        } else {
+            hasSignature = !isBlank;
+        }
+
+        if (hasSignature) {
+            const signatureData = canvas.toDataURL('image/png');
+            // Save drawn signature to both new and legacy fields
+            document.getElementById('clientSignatureData_drawn').value = signatureData;
+            document.getElementById('clientSignatureData').value = signatureData;
+            document.getElementById('signatureSaveMsg').style.display = 'block';
+        } else {
+            alert('Please draw your signature first');
+        }
+    }
+
+    function handleSignatureUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit');
+                return;
+            }
+            
+            // Validate file type
+            if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+                alert('Please upload a valid image file (JPG or PNG)');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedSignature = e.target.result;
+                // Save uploaded signature to both new and legacy fields
+                document.getElementById('clientSignatureData_uploaded').value = uploadedSignature;
+                document.getElementById('clientSignatureData').value = uploadedSignature;
+                document.getElementById('uploadedSigPreview').innerHTML = 
+                    '<img src="' + uploadedSignature + '" style="max-width: 200px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px;">';
+                if (signaturePad && typeof signaturePad.clear === 'function') signaturePad.clear();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+
+
+    function submitForm(event) {
+        event.preventDefault();
+        
+        const form = document.getElementById('clientEngagementForm');
+        const formData = new FormData(form);
+        formData.append('form_type', 'clientengagement');
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+        // Check if signature is provided (required - either drawn or uploaded)
+        const signatureField = document.getElementById('clientSignatureData');
+        if (!signatureField || !signatureField.value) {
+            alert('Please provide your signature before proceeding. You can either draw or upload your signature.');
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        // Collect form data for summary display
+        const formDataObj = {};
+        for (let [key, value] of formData.entries()) {
+            if (key !== 'form_type') {
+                if (formDataObj[key]) {
+                    if (Array.isArray(formDataObj[key])) {
+                        formDataObj[key].push(value);
+                    } else {
+                        formDataObj[key] = [formDataObj[key], value];
+                    }
+                } else {
+                    formDataObj[key] = value;
+                }
+            }
+        }
+
+        fetch('/submit-form', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Store form data and email in session for confirmation page
+                sessionStorage.setItem('submittedFormData', JSON.stringify(formDataObj));
+                sessionStorage.setItem('submittedEmail', formDataObj.client_email || '');
+                sessionStorage.setItem('submittedFormType', 'clientengagement');
+                
+                // Redirect to confirmation page
+                window.location.href = '/confirmation?email=' + encodeURIComponent(formDataObj.client_email || '') + '&form_type=clientengagement';
+            } else {
+                document.getElementById('formAlert').innerHTML = 
+                    '<div class="alert alert-error">' + data.message + '</div>';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Agreement';
+            }
+        })
+        .catch(error => {
+            document.getElementById('formAlert').innerHTML = 
+                '<div class="alert alert-error">An error occurred. Please try again.</div>';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Agreement';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initSignaturePad();
+
+    });
+</script>
+<style>
+    @media print {
+        .form-actions, .back-to-home {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-to-home">← Back to Home</a>
+
+<div class="form-container">
+    <div class="form-header">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Phemedia Logo" style="height: 60px; width: auto;">
+            <div>
+                <h2 style="margin: 0;">PHEMEDIA ONGUARD SERVICES LTD</h2>
+                <p style="margin: 0; font-size: 1rem; color: #333; font-weight: bold;">R C 8218219</p>
+            </div>
+        </div>
+        <h3>Client Engagement Form & Agreement</h3>
+        <p style="color: #666; font-size: 0.95rem;">For Provision of Security Guard Services and Other Services</p>
+        <p>Please fill in all required fields marked with an asterisk (*)</p>
+    </div>
+
+    <div id="formAlert"></div>
+
+    <form id="clientEngagementForm" onsubmit="submitForm(event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- Client Details -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Client Details</h3>
+        
+        <div class="form-group">
+            <label for="client_name" class="required">Full Name / Company Name</label>
+            <input type="text" id="client_name" name="client_name" placeholder="Full Name or Company Name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="client_address" class="required">Address</label>
+            <textarea id="client_address" name="client_address" placeholder="Full Address" required></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="client_phone" class="required">Phone / WhatsApp</label>
+                <input type="tel" id="client_phone" name="client_phone" placeholder="Phone Number" required>
+            </div>
+            <div class="form-group">
+                <label for="client_email" class="required">Email</label>
+                <input type="email" id="client_email" name="client_email" placeholder="Email Address" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="client_type" class="required">Type of Client</label>
+                <select id="client_type" name="client_type" required>
+                    <option value="">Select Client Type...</option>
+                    <option value="Individual">Individual</option>
+                    <option value="Corporate/Organization">Corporate / Organization</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="deployment_location" class="required">Location of Deployment (Site Address)</label>
+                <input type="text" id="deployment_location" name="deployment_location" placeholder="Site Address" required>
+            </div>
+        </div>
+
+        <!-- Service Requirements -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Service Requirements</h3>
+        
+        <div class="form-group">
+            <label for="service_type" class="required">Type of Service Needed</label>
+            <select id="service_type" name="service_type" required>
+                <option value="">Select Service Type...</option>
+                <option value="Armed Officer">Armed Officer</option>
+                <option value="Spy Police">Spy Police / Spy Police Driver (Local Guard)</option>
+                <option value="Security Guard">Security Guard</option>
+                <option value="Bouncer">Bouncer</option>
+                <option value="Multiple Services">Multiple Services (Mixed)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="number_of_guards" class="required">Number of Guards Required</label>
+            <input type="number" id="number_of_guards" name="number_of_guards" placeholder="Number of Guards" min="1" required>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="deployment_type" class="required">Duration / Frequency</label>
+                <select id="deployment_type" name="deployment_type" required>
+                    <option value="">Select Duration...</option>
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Event-based">Event-based</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="start_date" class="required">Preferred Deployment Start Date</label>
+                <input type="date" id="start_date" name="start_date" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="estimated_timeline" class="required">Estimated Deployment Timeline</label>
+            <textarea id="estimated_timeline" name="estimated_timeline" style="min-height: 120px; background: #e8f4f8; cursor: not-allowed;" readonly>Between 1 week to 4 weeks from receipt of non-administrative fee and completed formalities</textarea>
+        </div>
+
+        <!-- Fees & Payment Terms -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Fees & Payment Terms</h3>
+        
+        <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <h4 style="color: #2c3e50; margin-top: 0;">Non-Administrative Fee (Mobilization/Processing Fee)</h4>
+            <div class="form-group">
+                <label for="non_admin_fee">Non-Administrative Fee</label>
+                <input type="text" id="non_admin_fee" name="non_admin_fee" value="" placeholder="Enter non-administrative fee">
+                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                    ✓ Payable upfront before deployment processing begins<br>
+                    ✓ Covers pre-deployment preparations (vetting, assignment, site coordination)<br>
+                    ✓ Non-refundable once processing commences
+                </small>
+            </div>
+
+            <h4 style="color: #2c3e50; margin-top: 1.5rem;">Regular Service Fees / Salary</h4>
+            <p style="color: #555;">To be quoted separately based on the number of guards, shift type, duration, and location (monthly billing cycle).</p>
+
+            <h4 style="color: #2c3e50; margin-top: 1.5rem;">Payment Method</h4>
+            <div style="background: #e8f4f8; padding: 1rem; border-radius: 6px; border-left: 4px solid #3498db; color: #2c3e50;">
+                <p style="margin: 0 0 1rem 0;"><strong>Phemedia Onguard Services Ltd</strong></p>
+                <p style="margin: 0.5rem 0;"><strong>Moniepoint Microfinance Bank Account:</strong> 6707932476</p>
+                <p style="margin: 0.5rem 0;"><strong>OR</strong></p>
+                <p style="margin: 0.5rem 0;"><strong>Providus Bank Account:</strong> 1306872171</p>
+            </div>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Terms & Conditions</h3>
+        
+        <div style="background: #f5f5f5; padding: 1.5rem; border-left: 4px solid #e74c3c; border-radius: 6px; margin-bottom: 1.5rem;">
+            <ul style="margin: 0; padding-left: 1.5rem; color: #555; line-height: 1.8;">
+                <li>Deployment shall commence within 1–4 weeks after payment of the non-administrative fee.</li>
+                <li>If the client needs more than five guards, the non-administrative fee will increase.</li>
+                <li>Signing of this form and completion of any required site assessment or documentation are necessary.</li>
+                <li>All guards, armed officers, bouncers, and spy police officers are trained and qualified.</li>
+                <li>Client agrees to provide safe working conditions and report any issues promptly.</li>
+                <li>Any changes to requirements may affect the timeline or fees.</li>
+                <li>This agreement is governed by Nigerian law.</li>
+            </ul>
+        </div>
+
+        <!-- Client Acknowledgment -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Client Acknowledgment</h3>
+        
+        <div class="form-group">
+            <div class="checkbox-item" style="background: #f0f8ff; padding: 1rem; border-radius: 6px; border-left: 4px solid #3498db;">
+                <input type="checkbox" id="acknowledgment" name="acknowledgment" value="yes" required>
+                <label for="acknowledgment" style="font-weight: 500; line-height: 1.8;">
+                    I/We have read and agree to the terms above, including payment of the non-administrative fee prior to guard, bouncer, spy police officer, and armed officer deployment.
+                </label>
+            </div>
+        </div>
+
+        <!-- Client Signature -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Client Signature</h3>
+        
+        <div class="form-group">
+            <label class="required">Signature</label>
+            <canvas id="signatureCanvas" style="display: block; width: 100%; height: 150px; border: 2px solid #3498db; cursor: crosshair; background-color: white; border-radius: 4px; margin-bottom: 0.5rem;"></canvas>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <button type="button" onclick="clearSignature()" class="btn btn-secondary" style="flex: 1;">Clear Signature</button>
+                <button type="button" onclick="saveSignature()" class="btn btn-primary" style="flex: 1;">Save Signature</button>
+            </div>
+            <div id="signatureSaveMsg" style="display: none; color: #27ae60; font-weight: bold; margin-bottom: 1rem;">✓ Signature saved successfully</div>
+            
+            <p style="text-align: center; color: #7f8c8d; margin: 1rem 0;">OR</p>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="signatureUpload">Upload Signature Image:</label>
+                <input type="file" id="signatureUpload" accept="image/*" onchange="handleSignatureUpload(event)" style="margin-top: 0.5rem;">
+            </div>
+            <div id="uploadedSigPreview" style="margin-bottom: 1rem;"></div>
+            <input type="hidden" id="clientSignatureData" name="clientSignatureData" required>
+            <input type="hidden" id="clientSignatureData_drawn" name="clientSignatureData_drawn">
+            <input type="hidden" id="clientSignatureData_uploaded" name="clientSignatureData_uploaded">
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="signature_date" class="required">Date</label>
+                <input type="date" id="signature_date" name="signature_date" required>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">Submit Agreement</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+            <button type="button" onclick="window.print()" class="btn btn-secondary">Print Form</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

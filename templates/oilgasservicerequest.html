@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+
+{% set is_admin_form = is_admin_form if is_admin_form is defined else True %}
+{% set request_data = request_data if request_data is defined else {} %}
+{% set request_token = request_token if request_token is defined else '' %}
+
+{% block title %}Oil & Gas Sector Service Request - Phemedia Onguard Services Ltd{% endblock %}
+
+{% block extra_js %}
+<script>
+    let signaturePad;
+    let uploadedSignature = null;
+    let isDrawing = false;
+    let ctx = null;
+
+    // Basic fallback drawing implementation
+    function setupBasicDrawing(canvas) {
+        ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDrawing = false; });
+        canvas.addEventListener('mouseout', () => { isDrawing = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.beginPath();
+            ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('touchend', () => { isDrawing = false; });
+    }
+
+    // Wait for SignaturePad to load
+    function waitForSignaturePad() {
+        return new Promise((resolve) => {
+            if (typeof SignaturePad !== 'undefined') {
+                resolve(true);
+            } else {
+                const maxAttempts = 20;
+                let attempts = 0;
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    if (typeof SignaturePad !== 'undefined' || attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        resolve(attempts < maxAttempts);
+                    }
+                }, 100);
+            }
+        });
+    }
+
+    async function initSignaturePad() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+
+        const sigPadLoaded = await waitForSignaturePad();
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        if (sigPadLoaded && typeof SignaturePad !== 'undefined') {
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)'
+            });
+        } else {
+            setupBasicDrawing(canvas);
+        }
+    }
+
+    function clearSignature() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (signaturePad && typeof signaturePad.clear === 'function') {
+            signaturePad.clear();
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        document.getElementById('signatureSaveMsg').style.display = 'none';
+        uploadedSignature = null;
+        document.getElementById('uploadedSigPreview').innerHTML = '';
+    }
+
+    function saveSignatureFromPad() {
+        const canvas = document.getElementById('signatureCanvas');
+        if (!canvas) return;
+
+        let canvasData;
+
+        if (signaturePad && typeof signaturePad.toDataURL === 'function') {
+            canvasData = signaturePad.toDataURL('image/png');
+        } else {
+            canvasData = canvas.toDataURL('image/png');
+        }
+
+        const blankCanvas = document.createElement('canvas');
+        blankCanvas.width = canvas.width;
+        blankCanvas.height = canvas.height;
+        const isBlank = canvasData === blankCanvas.toDataURL('image/png');
+
+        if (isBlank) {
+            alert('Please draw your signature before saving.');
+            return;
+        }
+
+        // Save drawn signature to both the new field and the legacy field
+        document.getElementById('clientSignatureData_drawn').value = canvasData;
+        document.getElementById('clientSignatureData').value = canvasData;
+        document.getElementById('signatureSaveMsg').style.display = 'block';
+    }
+
+    function handleSignatureUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please upload a valid image file (JPG, PNG, GIF, etc.)');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedSignature = e.target.result;
+            // Save uploaded signature to both the new field and the legacy field
+            document.getElementById('clientSignatureData_uploaded').value = uploadedSignature;
+            document.getElementById('clientSignatureData').value = uploadedSignature;
+            const preview = '<img src="' + uploadedSignature + '" style="max-width: 200px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px;">';
+            document.getElementById('uploadedSigPreview').innerHTML = preview;
+            document.getElementById('signatureSaveMsg').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function submitForm(event) {
+        event.preventDefault();
+        
+        const signatureData = document.getElementById('clientSignatureData').value;
+        if (!signatureData) {
+            alert('Please provide your signature (either by drawing or uploading) before submitting.');
+            return;
+        }
+
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        const formData = new FormData(event.target);
+        const formDataObj = Object.fromEntries(formData);
+        formDataObj.form_type = 'oilgasservicerequest';
+
+        // Rename signature fields based on who is submitting
+        if (!formDataObj.request_token) {
+            // ADMIN submission: store under admin-specific keys
+            formDataObj.adminSignatureData_drawn = formDataObj.clientSignatureData_drawn || '';
+            formDataObj.adminSignatureData_uploaded = formDataObj.clientSignatureData_uploaded || '';
+            formDataObj.adminSignatureData = formDataObj.clientSignatureData || '';
+            delete formDataObj.clientSignatureData_drawn;
+            delete formDataObj.clientSignatureData_uploaded;
+            delete formDataObj.clientSignatureData;
+        }
+
+        fetch('/submit-form', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify(formDataObj)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect to confirmation page
+                window.location.href = '/confirmation?email=' + encodeURIComponent(formDataObj.client_email || '') + '&form_type=oilgasservicerequest&status=pending_approval';
+            } else {
+                document.getElementById('formAlert').innerHTML = 
+                    '<div class="alert alert-error">' + data.message + '</div>';
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        })
+        .catch(error => {
+            document.getElementById('formAlert').innerHTML = 
+                '<div class="alert alert-error">An error occurred. Please try again.</div>';
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initSignaturePad);
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .form-container {
+            background: white;
+            box-shadow: none;
+            border: none;
+        }
+        
+        h3, h2 {
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .form-header {
+            page-break-after: avoid;
+        }
+        
+        .form-group, .form-section {
+            page-break-inside: avoid;
+            display: block !important;
+            visibility: visible !important;
+            margin-bottom: 1rem;
+        }
+        
+        input[type="text"], input[type="email"], input[type="date"], input[type="tel"], input[type="number"], textarea, select {
+            border: 1px solid #ccc;
+            background: white;
+            color: black;
+        }
+        
+        .back-to-home, .form-actions, button {
+            display: none !important;
+        }
+        
+        p {
+            margin: 0.5rem 0 !important;
+        }
+        
+        #signatureCanvas {
+            border: 1px solid #000;
+            display: block;
+        }
+        
+        input[type="checkbox"], input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+        
+        @page {
+            margin: 1cm;
+            size: A4;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    }
+    
+    .form-group {
+        display: block !important;
+    }
+
+    .field-inline {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .field-inline .form-group {
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .checkbox-group, .radio-group {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        margin: 0.5rem 0;
+    }
+
+    .checkbox-item, .radio-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .checkbox-item input, .radio-item input {
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-to-home">← Back to Home</a>
+
+<div class="form-container">
+    <div class="form-header">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Phemedia Logo" style="height: 60px; width: auto;">
+            <div>
+                <h2 style="margin: 0;">PHEMEDIA ONGUARD SERVICES LTD</h2>
+                <p style="margin: 0; font-size: 1rem; color: #333; font-weight: bold;">R C 8218219</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">Client Service Request Form</p>
+                <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">Oil & Gas Sector</p>
+            </div>
+        </div>
+        <hr style="margin-top: 1rem; margin-bottom: 1rem;">
+        <p style="margin-top: 1rem;">Please read carefully and fill in all required fields marked with an asterisk (*)</p>
+    </div>
+
+    <div id="formAlert"></div>
+
+    <form id="oilGasForm" onsubmit="submitForm(event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if not is_admin_form %}
+        <input type="hidden" name="request_token" value="{{ request_token }}">
+        <div style="background: #e8f5e9; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; color: #2e7d32;">
+            <p style="margin: 0 0 0.5rem 0;"><strong>👥 CLIENT FORM - Complete Your Section</strong></p>
+            <p style="margin: 0; font-size: 0.9rem;">📋 Instructions: The company has prepared a service request. Please review the company section (below) and complete your authorization and signature.</p>
+        </div>
+        {% endif %}
+
+        <!-- Client Information -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Client Information</h3>
+        
+        <div class="form-group">
+            <label for="company_name" class="required">Company Name</label>
+            <input type="text" id="company_name" name="company_name" placeholder="Full Company Name" value="{{ request_data.get('company_name', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+        </div>
+
+        <div class="field-inline">
+            <div class="form-group">
+                <label for="contact_person" class="required">Contact Person</label>
+                <input type="text" id="contact_person" name="contact_person" placeholder="Full Name" value="{{ request_data.get('contact_person', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+            <div class="form-group">
+                <label for="position_title" class="required">Position/Title</label>
+                <input type="text" id="position_title" name="position_title" placeholder="Job Title" value="{{ request_data.get('position_title', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+        </div>
+
+        <div class="field-inline">
+            <div class="form-group">
+                <label for="client_email" class="required">Email Address</label>
+                <input type="email" id="client_email" name="client_email" placeholder="Email Address" value="{{ request_data.get('client_email', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+            <div class="form-group">
+                <label for="client_phone" class="required">Phone Number</label>
+                <input type="tel" id="client_phone" name="client_phone" placeholder="Phone Number" value="{{ request_data.get('client_phone', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+        </div>
+
+        <!-- Service Requirements -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Service Requirements</h3>
+
+        <!-- 1. Document Verification -->
+        <h4 style="color: #34495e; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600;">1. Document Verification & Background Checks</h4>
+        
+        <div class="field-inline">
+            <div class="form-group">
+                <label for="proof_of_product">Proof of Product</label>
+                <input type="text" id="proof_of_product" name="proof_of_product" placeholder="Document Reference" value="{{ request_data.get('proof_of_product', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+            <div class="form-group">
+                <label for="bill_of_lading">Bill of Lading</label>
+                <input type="text" id="bill_of_lading" name="bill_of_lading" placeholder="Document Reference" value="{{ request_data.get('bill_of_lading', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+            <div class="form-group">
+                <label for="charterer_background">Charterer Background Check</label>
+                <input type="text" id="charterer_background" name="charterer_background" placeholder="Status/Reference" value="{{ request_data.get('charterer_background', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+        </div>
+
+        <!-- 2. Equipment & Vessel Rentals -->
+        <h4 style="color: #34495e; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600;">2. Equipment & Vessel Rentals</h4>
+        
+        <div class="form-group">
+            <label className="required">Swamp Drilling Rig for Lease</label>
+            <div class="radio-group">
+                <div class="radio-item">
+                    <input type="radio" id="swamp_rig_yes" name="swamp_drilling_rig" value="yes" {% if request_data and request_data.get('swamp_drilling_rig') == 'yes' %}checked{% endif %} {% if not is_admin_form %}onclick="return false;"{% endif %}>
+                    <label for="swamp_rig_yes">Yes</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="swamp_rig_no" name="swamp_drilling_rig" value="no" {% if not request_data or request_data.get('swamp_drilling_rig') != 'yes' %}checked{% endif %} {% if not is_admin_form %}onclick="return false;"{% endif %}>
+                    <label for="swamp_rig_no">No</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="rig_requirements">If yes, specify requirements:</label>
+            <textarea id="rig_requirements" name="rig_requirements" placeholder="Specify your requirements" rows="2" style="width: 100%; {% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}" {% if not is_admin_form %}readonly{% endif %}>{{ (request_data.get('rig_requirements') or 'Not Applicable') if request_data else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="vessel_rental">Vessel Rental (Specify Type & Specifications):</label>
+            <textarea id="vessel_rental" name="vessel_rental" placeholder="Specify vessel type and specifications" rows="3" style="width: 100%; {% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}" {% if not is_admin_form %}readonly{% endif %}>{{ request_data.get('vessel_rental', '') if request_data else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label className="required">Crew Security Boat for Hire</label>
+            <div class="radio-group">
+                <div class="radio-item">
+                    <input type="radio" id="crew_boat_yes" name="crew_security_boat" value="yes" {% if request_data and request_data.get('crew_security_boat') == 'yes' %}checked{% endif %} {% if not is_admin_form %}onclick="return false;"{% endif %}>
+                    <label for="crew_boat_yes">Yes</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="crew_boat_no" name="crew_security_boat" value="no" {% if not request_data or request_data.get('crew_security_boat') != 'yes' %}checked{% endif %} {% if not is_admin_form %}onclick="return false;"{% endif %}>
+                    <label for="crew_boat_no">No</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Crew & Duration -->
+        <h4 style="color: #34495e; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600;">3. Crew & Duration</h4>
+        
+        <div class="field-inline">
+            <div class="form-group">
+                <label for="security_crew_count" class="required">Number of Security Crew Needed</label>
+                <input type="number" id="security_crew_count" name="security_crew_count" placeholder="Number of personnel" min="1" value="{{ request_data.get('security_crew_count', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+            <div class="form-group">
+                <label for="contract_duration" class="required">Contract Duration</label>
+                <input type="text" id="contract_duration" name="contract_duration" placeholder="e.g., 30 days / 3 months" value="{{ request_data.get('contract_duration', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+        </div>
+
+        <!-- 4. Deployment Details -->
+        <h4 style="color: #34495e; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600;">4. Deployment Details</h4>
+        
+        <div class="field-inline">
+            <div class="form-group">
+                <label for="vessel_destination" class="required">Destination of Vessels/Boats</label>
+                <input type="text" id="vessel_destination" name="vessel_destination" placeholder="Destination location" value="{{ request_data.get('vessel_destination', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+            <div class="form-group">
+                <label for="kickoff_point" class="required">Kickoff Point/Port</label>
+                <input type="text" id="kickoff_point" name="kickoff_point" placeholder="Port or starting point" value="{{ request_data.get('kickoff_point', '') if request_data else '' }}" {% if not is_admin_form %}readonly{% else %}required{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Additional Information</h3>
+        
+        <div class="form-group">
+            <label for="additional_info">Please provide any additional instructions or specific requirements:</label>
+            <textarea id="additional_info" name="additional_info" placeholder="Enter any additional information here..." rows="4" style="width: 100%; {% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}" {% if not is_admin_form %}readonly{% endif %}>{{ request_data.get('additional_info', '') if request_data else '' }}</textarea>
+        </div>
+
+        <!-- Financial & Timeline Details -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Financial & Timeline Details</h3>
+        
+        <div style="background: #fff3cd; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; color: #856404;">
+            <p style="margin: 0 0 0.5rem 0;"><strong>Mobilization Fee</strong></p>
+            <p style="margin: 0;">A mobilization fee is required to meet a deployment timeline of 1 to 5 days.</p>
+            <p style="margin: 0.5rem 0 0 0;"><strong>Estimated Timeline for Service Delivery:</strong> 1 - 5 days from mobilization</p>
+        </div>
+
+        <div class="form-group">
+            <label for="estimated_timeline" class="required">Confirm Acceptable Timeline</label>
+            <select id="estimated_timeline" name="estimated_timeline" required {% if not is_admin_form %}disabled{% endif %} style="{% if not is_admin_form %}background-color: #f5f5f5; cursor: not-allowed;{% endif %}">
+                <option value="">-- Select Timeline --</option>
+                <option value="1-3_days" {% if request_data and request_data.get('estimated_timeline') == '1-3_days' %}selected{% endif %}>1-3 days</option>
+                <option value="3-5_days" {% if request_data and request_data.get('estimated_timeline') == '3-5_days' %}selected{% endif %}>3-5 days</option>
+                <option value="flexible" {% if request_data and request_data.get('estimated_timeline') == 'flexible' %}selected{% endif %}>Flexible</option>
+            </select>
+            {% if not is_admin_form %}<input type="hidden" name="estimated_timeline" value="{{ request_data.get('estimated_timeline', '') if request_data else '' }}">{% endif %}
+        </div>
+
+        <!-- Bank Details -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Bank Details</h3>
+        
+        <div style="background: #e8f4f8; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; color: #2c3e50;">
+            <p style="margin: 0 0 1rem 0;"><strong>Phemedia Onguard Services Ltd</strong></p>
+            <p style="margin: 0.5rem 0;"><strong>Moniepoint Microfinance Bank Account:</strong> 6707932476</p>
+            <p style="margin: 0.5rem 0;"><strong>OR</strong></p>
+            <p style="margin: 0.5rem 0;"><strong>Providus Bank Account:</strong> 1306872171</p>
+        </div>
+
+        <!-- Signature Section -->
+        <h3 style="color: #2c3e50; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">{% if request_token %}Client{% else %}Admin{% endif %} Authorization & Agreement</h3>
+        
+        <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; color: #555;">
+            <p>I hereby confirm that the information provided is accurate and agree to the terms and conditions of Phemedia Onguard Services Ltd.</p>
+        </div>
+
+        <div style="background: #e8f4f8; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="signatory_name" class="required">Name</label>
+                    <input type="text" id="signatory_name" name="signatory_name" placeholder="Your Full Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="signatory_position" class="required">Position</label>
+                    <input type="text" id="signatory_position" name="signatory_position" placeholder="Your Position" required>
+                </div>
+            </div>
+            
+            <!-- Signature Pad Section -->
+            <div class="form-group">
+                <label class="required">Signature (Draw or Upload)</label>
+                <p style="margin: 0.5rem 0 1rem 0; color: #e74c3c; font-size: 0.9rem;"><strong>*</strong> You must provide your signature - either by drawing or uploading an image</p>
+                
+                <!-- Drawing Pad -->
+                <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                    <p style="margin: 0 0 0.5rem 0; color: #2c3e50; font-weight: bold;">Option 1: Draw Your Signature</p>
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <canvas id="signatureCanvas" style="border: 2px solid #3498db; border-radius: 4px; cursor: crosshair; background: white; display: block; width: 100%; height: 200px; touch-action: none;"></canvas>
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="saveSignatureFromPad()" style="padding: 0.5rem 1.5rem;">✓ Save Drawn Signature</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearSignature()" style="padding: 0.5rem 1.5rem;">Clear Canvas</button>
+                    </div>
+                    <div id="signatureSaveMsg" style="display: none; text-align: center; color: #27ae60; margin-top: 0.5rem; font-size: 0.9rem;">
+                        ✓ Signature saved successfully
+                    </div>
+                </div>
+                
+                <div style="text-align: center; color: #666; margin-bottom: 1rem;">
+                    <strong>OR</strong>
+                </div>
+                
+                <!-- Upload Option -->
+                <div style="background: #f0f8ff; padding: 1rem; border-radius: 6px; border: 2px dashed #3498db;">
+                    <p style="margin: 0 0 0.5rem 0; color: #2c3e50; font-weight: bold;">Option 2: Upload Your Signature</p>
+                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">Accepted formats: JPG, PNG (max 5MB)</p>
+                    
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <input type="file" id="signatureUpload" name="signatureUpload" accept="image/*" onchange="handleSignatureUpload(event)" style="padding: 0.75rem; border: 1px solid #3498db; border-radius: 4px; width: 100%; cursor: pointer; background: white;">
+                    </div>
+                    
+                    <div id="uploadedSigPreview" style="text-align: center; margin-bottom: 1rem;"></div>
+                </div>
+            </div>
+            <input type="hidden" id="clientSignatureData" name="clientSignatureData" required>
+            <input type="hidden" id="clientSignatureData_drawn" name="clientSignatureData_drawn">
+            <input type="hidden" id="clientSignatureData_uploaded" name="clientSignatureData_uploaded">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="signature_date" class="required">Date</label>
+                    <input type="date" id="signature_date" name="signature_date" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button type="submit" class="btn btn-success">Submit Service Request</button>
+            <button type="button" class="btn btn-success" onclick="window.print()" style="background: #3498db;">🖨️ Print</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #d5f4e6; border-radius: 6px; color: #27ae60;">
+        <p style="margin: 0;"><strong>✓ Service Request Agreement</strong><br>
+        This Service Request Form is legally binding and shall be effective from the date completed above. Phemedia Onguard Services Ltd will process your request within 1-5 business days.</p>
+    </div>
+</div>
+{% endblock %}
