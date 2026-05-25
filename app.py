@@ -30,7 +30,7 @@ except ImportError:
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'phemedaa-forms-secret-key-2026')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:$Albert2022%23@localhost:3306/phemedaa_forms'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://mzerisoh_phemediauser:%40phemediaadmin123456_@localhost:3306/mzerisoh_phemediaaform'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Security Configuration
