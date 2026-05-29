@@ -1,0 +1,47 @@
+{
+    "name": "phemedaa/forms-portal",
+    "description": "PHEMEDAA Forms Portal - Laravel Application",
+    "type": "project",
+    "require": {
+        "php": "^8.1",
+        "laravel/framework": "^10.0",
+        "laravel/tinker": "^2.8",
+        "barryvdh/laravel-dompdf": "^2.1",
+        "guzzlehttp/guzzle": "^7.5",
+        "laravel/fortify": "^1.15",
+        "laravel/sanctum": "^3.14"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.13",
+        "laravel/sail": "^1.26",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^10.1",
+        "spatie/laravel-ignition": "^2.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
+        "post-create-project-cmd": [
+            "@php artisan key:generate --ansi"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    }
+}
