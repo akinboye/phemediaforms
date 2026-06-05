@@ -1,5 +1,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^$ public/ [L]
-    RewriteRule (.*) public/$1 [L]
+    RewriteBase /forms/
+
+    # Redirect all requests to public/ folder (except for actual public folder files)
+    RewriteCond %{REQUEST_URI} !^/forms/public/
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
