@@ -1,62 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Flask
-instance/
-.webassets-cache
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-phemedaa_forms.db
-
-# IDE
-.vscode/
-.idea/
+# Laravel
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+.env
+.env.backup
+.env.production
+.env.local
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.idea
+/.vscode
 *.swp
 *.swo
-*~
-.DS_Store
 
-# Environment variables
-.env
-.env.local
-
-# Uploads folder (optional - remove comment if you want to commit uploads)
-uploads/
+# Uploads (user-generated files)
+/uploads/
 
 # Logs
 *.log
-flask_log.txt
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Python legacy (kept for reference)
+__pycache__/
+*.py[cod]
+*.so
+venv/
+ENV/
+*.egg-info/
+instance/
+.pytest_cache/
+.coverage
