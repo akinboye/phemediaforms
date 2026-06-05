@@ -16,16 +16,46 @@
             color: #1f2937;
         }
         .btn-primary {
-            @apply px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition;
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background-color: #2563eb;
+            color: #ffffff;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.15s ease-in-out;
         }
+        .btn-primary:hover { background-color: #1d4ed8; }
         .btn-secondary {
-            @apply px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition;
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background-color: #4b5563;
+            color: #ffffff;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.15s ease-in-out;
         }
+        .btn-secondary:hover { background-color: #374151; }
         .btn-danger {
-            @apply px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition;
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background-color: #dc2626;
+            color: #ffffff;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.15s ease-in-out;
         }
+        .btn-danger:hover { background-color: #b91c1c; }
         .card {
-            @apply bg-white rounded-lg shadow-md p-6;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
         }
     </style>
     @yield('extra-css')
