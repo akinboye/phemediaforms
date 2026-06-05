@@ -80,5 +80,5 @@ Route::middleware(['auth:superadmin'])->group(function () {
 
 // 404 handling
 Route::fallback(function () {
-    return response()->view('errors.404', [], 404);
+    abort(404);
 });
